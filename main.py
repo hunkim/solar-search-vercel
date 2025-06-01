@@ -405,6 +405,7 @@ async def telegram_webhook(request: Request):
         return {"status": "error", "message": str(e)}
 
 @app.post("/set_webhook")
+@app.get("/set_webhook")
 async def set_webhook(request: Request, webhook_url: Optional[str] = None):
     """Set the webhook URL for the Telegram bot"""
     if not bot:
