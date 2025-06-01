@@ -8,7 +8,6 @@ import time
 import re
 from urllib.parse import urlparse
 from typing import Optional, Dict, Any
-from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 import httpx
 
@@ -33,34 +32,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Manage the lifespan of the FastAPI application"""
-    # Startup
-    global bot
-    if bot:
-        try:
-            await bot.initialize()
-            logger.info("Bot initialized successfully")
-        except Exception as e:
-            logger.error(f"Failed to initialize bot: {e}")
-            bot = None
-    
-    yield
-    
-    # Shutdown
-    if bot:
-        try:
-            await bot.shutdown()
-            logger.info("Bot shutdown successfully")
-        except Exception as e:
-            logger.error(f"Error during bot shutdown: {e}")
-
 app = FastAPI(
     title="Telegram Bot API",
     description="A Telegram bot powered by Solar API with grounding search",
-    version="1.0.0",
-    lifespan=lifespan
+    version="1.0.0"
 )
 
 # Configuration
@@ -73,39 +48,40 @@ if not TELEGRAM_BOT_TOKEN:
 if not UPSTAGE_API_KEY:
     logger.error("UPSTAGE_API_KEY environment variable not set!")
 
-# Initialize bot with custom HTTP client settings
-bot = None
-if TELEGRAM_BOT_TOKEN:
+def create_bot():
+    """Create a new bot instance optimized for serverless environments"""
+    if not TELEGRAM_BOT_TOKEN:
+        return None
+    
     try:
-        # Configure HTTPXRequest with optimized settings
+        # Configure HTTPXRequest with serverless-optimized settings
         request_instance = HTTPXRequest(
-            connection_pool_size=10,  # Increase connection pool size
-            pool_timeout=30.0,        # Increase pool timeout
-            connect_timeout=10.0,     # Connection timeout
-            read_timeout=30.0,        # Read timeout
-            write_timeout=30.0,       # Write timeout
+            connection_pool_size=1,   # Minimal pool size for serverless
+            pool_timeout=10.0,        # Shorter timeouts
+            connect_timeout=5.0,      
+            read_timeout=15.0,        
+            write_timeout=15.0,       
             httpx_kwargs={
                 'limits': httpx.Limits(
-                    max_connections=100,
-                    max_keepalive_connections=20,
+                    max_connections=1,        # Single connection for serverless
+                    max_keepalive_connections=0,  # No keepalive in serverless
                 ),
                 'timeout': httpx.Timeout(
-                    connect=10.0,
-                    read=30.0,
-                    write=30.0,
-                    pool=30.0
+                    connect=5.0,
+                    read=15.0,
+                    write=15.0,
+                    pool=10.0
                 )
             }
         )
         
-        # Initialize bot with custom request instance
+        # Create bot with optimized settings
         bot = Bot(token=TELEGRAM_BOT_TOKEN, request=request_instance)
-        logger.info("Bot initialized with custom HTTPXRequest settings")
+        logger.info("Bot created with serverless-optimized settings")
+        return bot
     except Exception as e:
-        logger.error(f"Error initializing bot with custom HTTPXRequest: {e}")
-        # Fallback to default bot initialization
-        bot = Bot(token=TELEGRAM_BOT_TOKEN)
-        logger.info("Bot initialized with default settings")
+        logger.error(f"Error creating bot: {e}")
+        return None
 
 solar_api = SolarAPI()
 
@@ -218,14 +194,14 @@ class TelegramWebhookHandler:
         
         return text
 
-    async def start(self, update: Update):
+    async def start(self, update: Update, bot: Bot):
         """Send a message when the command /start is issued."""
         await bot.send_message(
             chat_id=update.effective_chat.id,
             text="Hello! Send me any question and I'll search for an answer using Solar API."
         )
     
-    async def help_command(self, update: Update):
+    async def help_command(self, update: Update, bot: Bot):
         """Send help message when the command /help is issued."""
         help_text = (
             "☀️ <b>Welcome to Solar Bot!</b>\n\n"
@@ -244,7 +220,7 @@ class TelegramWebhookHandler:
             disable_web_page_preview=True
         )
 
-    async def handle_text(self, update: Update):
+    async def handle_text(self, update: Update, bot: Bot):
         """Process user's question using Solar API with grounding."""
         
         # Check if this is a group chat and if the bot is tagged
@@ -254,17 +230,9 @@ class TelegramWebhookHandler:
         # Get the bot's username safely
         bot_username = None
         try:
-            if bot:
-                # Try to get username, initializing if needed
-                try:
-                    bot_username = bot.username
-                except RuntimeError as runtime_error:
-                    if "not properly initialized" in str(runtime_error):
-                        logger.info("Bot not initialized, attempting to initialize...")
-                        await bot.initialize()
-                        bot_username = bot.username
-                    else:
-                        raise runtime_error
+            # Initialize bot if needed and get username
+            await bot.initialize()
+            bot_username = bot.username
         except Exception as e:
             logger.warning(f"Could not get bot username: {e}")
             bot_username = None
@@ -433,6 +401,12 @@ class TelegramWebhookHandler:
                 message_id=status_message.message_id,
                 text=f"❌ Error generating answer: {str(e)}"
             )
+        finally:
+            # Clean up bot connection in serverless environment
+            try:
+                await bot.shutdown()
+            except Exception as e:
+                logger.debug(f"Error during bot cleanup: {e}")
 
 # Initialize webhook handler
 webhook_handler = TelegramWebhookHandler()
@@ -451,7 +425,14 @@ async def root():
 @app.post("/webhook")
 async def telegram_webhook(request: Request):
     """Handle incoming Telegram updates via webhook"""
+    bot = None
     try:
+        # Create a fresh bot instance for this request
+        bot = create_bot()
+        if not bot:
+            logger.error("Failed to create bot instance")
+            return {"status": "error", "message": "Bot not configured"}
+        
         # Get the JSON data from the request
         json_data = await request.json()
         logger.info(f"Received webhook data: {json_data}")
@@ -467,38 +448,47 @@ async def telegram_webhook(request: Request):
         if update.message:
             if update.message.text:
                 if update.message.text.startswith('/start'):
-                    await webhook_handler.start(update)
+                    await webhook_handler.start(update, bot)
                 elif update.message.text.startswith('/help'):
-                    await webhook_handler.help_command(update)
+                    await webhook_handler.help_command(update, bot)
                 else:
-                    await webhook_handler.handle_text(update)
+                    await webhook_handler.handle_text(update, bot)
         
         return {"status": "ok"}
     
     except Exception as e:
         logger.error(f"Error processing webhook: {e}", exc_info=True)
         return {"status": "error", "message": str(e)}
+    finally:
+        # Always clean up the bot instance
+        if bot:
+            try:
+                await bot.shutdown()
+            except Exception as e:
+                logger.debug(f"Error during bot cleanup: {e}")
 
 @app.post("/set_webhook")
 @app.get("/set_webhook")
 async def set_webhook(request: Request, webhook_url: Optional[str] = None):
     """Set the webhook URL for the Telegram bot"""
+    bot = create_bot()
     if not bot:
         raise HTTPException(status_code=500, detail="Bot not configured")
     
-    # Auto-detect webhook URL from the request if not provided
-    if not webhook_url:
-        # Extract base URL from the request
-        base_url = f"{request.url.scheme}://{request.url.netloc}"
-        webhook_url = f"{base_url}/webhook"
-        logger.info(f"Auto-detected webhook URL: {webhook_url}")
-    else:
-        # Use provided URL and ensure it ends with /webhook
-        if not webhook_url.endswith('/webhook'):
-            webhook_url = f"{webhook_url}/webhook"
-    
     try:
-        # Set the webhook
+        # Auto-detect webhook URL from the request if not provided
+        if not webhook_url:
+            # Extract base URL from the request
+            base_url = f"{request.url.scheme}://{request.url.netloc}"
+            webhook_url = f"{base_url}/webhook"
+            logger.info(f"Auto-detected webhook URL: {webhook_url}")
+        else:
+            # Use provided URL and ensure it ends with /webhook
+            if not webhook_url.endswith('/webhook'):
+                webhook_url = f"{webhook_url}/webhook"
+        
+        # Initialize bot and set the webhook
+        await bot.initialize()
         success = await bot.set_webhook(url=webhook_url)
         if success:
             logger.info(f"Webhook successfully set to: {webhook_url}")
@@ -512,6 +502,13 @@ async def set_webhook(request: Request, webhook_url: Optional[str] = None):
     except Exception as e:
         logger.error(f"Error setting webhook: {e}")
         raise HTTPException(status_code=500, detail=f"Error setting webhook: {str(e)}")
+    finally:
+        # Clean up bot instance
+        if bot:
+            try:
+                await bot.shutdown()
+            except Exception as e:
+                logger.debug(f"Error during bot cleanup: {e}")
 
 @app.get("/health")
 async def health_check():
