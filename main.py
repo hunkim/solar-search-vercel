@@ -60,19 +60,7 @@ def create_bot():
             pool_timeout=10.0,        # Shorter timeouts
             connect_timeout=5.0,      
             read_timeout=15.0,        
-            write_timeout=15.0,       
-            httpx_kwargs={
-                'limits': httpx.Limits(
-                    max_connections=1,        # Single connection for serverless
-                    max_keepalive_connections=0,  # No keepalive in serverless
-                ),
-                'timeout': httpx.Timeout(
-                    connect=5.0,
-                    read=15.0,
-                    write=15.0,
-                    pool=10.0
-                )
-            }
+            write_timeout=15.0       
         )
         
         # Create bot with optimized settings
@@ -80,8 +68,15 @@ def create_bot():
         logger.info("Bot created with serverless-optimized settings")
         return bot
     except Exception as e:
-        logger.error(f"Error creating bot: {e}")
-        return None
+        logger.error(f"Error creating bot with HTTPXRequest: {e}")
+        # Fallback to default bot initialization
+        try:
+            bot = Bot(token=TELEGRAM_BOT_TOKEN)
+            logger.info("Bot created with default settings")
+            return bot
+        except Exception as fallback_error:
+            logger.error(f"Error creating bot with default settings: {fallback_error}")
+            return None
 
 solar_api = SolarAPI()
 
