@@ -258,13 +258,13 @@ class TelegramWebhookHandler:
                 # Try to get username, initializing if needed
                 try:
                     bot_username = bot.username
-                except RuntimeError as re:
-                    if "not properly initialized" in str(re):
+                except RuntimeError as runtime_error:
+                    if "not properly initialized" in str(runtime_error):
                         logger.info("Bot not initialized, attempting to initialize...")
                         await bot.initialize()
                         bot_username = bot.username
                     else:
-                        raise re
+                        raise runtime_error
         except Exception as e:
             logger.warning(f"Could not get bot username: {e}")
             bot_username = None
