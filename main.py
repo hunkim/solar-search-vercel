@@ -8,9 +8,12 @@ import time
 import re
 from urllib.parse import urlparse
 from typing import Optional, Dict, Any
+from contextlib import asynccontextmanager
 from dotenv import load_dotenv
+import httpx
 
 from telegram import Update, Bot
+from telegram.request import HTTPXRequest
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -30,10 +33,34 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage the lifespan of the FastAPI application"""
+    # Startup
+    global bot
+    if bot:
+        try:
+            await bot.initialize()
+            logger.info("Bot initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize bot: {e}")
+            bot = None
+    
+    yield
+    
+    # Shutdown
+    if bot:
+        try:
+            await bot.shutdown()
+            logger.info("Bot shutdown successfully")
+        except Exception as e:
+            logger.error(f"Error during bot shutdown: {e}")
+
 app = FastAPI(
     title="Telegram Bot API",
     description="A Telegram bot powered by Solar API with grounding search",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # Configuration
@@ -46,8 +73,40 @@ if not TELEGRAM_BOT_TOKEN:
 if not UPSTAGE_API_KEY:
     logger.error("UPSTAGE_API_KEY environment variable not set!")
 
-# Initialize bot and solar API
-bot = Bot(token=TELEGRAM_BOT_TOKEN) if TELEGRAM_BOT_TOKEN else None
+# Initialize bot with custom HTTP client settings
+bot = None
+if TELEGRAM_BOT_TOKEN:
+    try:
+        # Configure HTTPXRequest with optimized settings
+        request_instance = HTTPXRequest(
+            connection_pool_size=10,  # Increase connection pool size
+            pool_timeout=30.0,        # Increase pool timeout
+            connect_timeout=10.0,     # Connection timeout
+            read_timeout=30.0,        # Read timeout
+            write_timeout=30.0,       # Write timeout
+            httpx_kwargs={
+                'limits': httpx.Limits(
+                    max_connections=100,
+                    max_keepalive_connections=20,
+                ),
+                'timeout': httpx.Timeout(
+                    connect=10.0,
+                    read=30.0,
+                    write=30.0,
+                    pool=30.0
+                )
+            }
+        )
+        
+        # Initialize bot with custom request instance
+        bot = Bot(token=TELEGRAM_BOT_TOKEN, request=request_instance)
+        logger.info("Bot initialized with custom HTTPXRequest settings")
+    except Exception as e:
+        logger.error(f"Error initializing bot with custom HTTPXRequest: {e}")
+        # Fallback to default bot initialization
+        bot = Bot(token=TELEGRAM_BOT_TOKEN)
+        logger.info("Bot initialized with default settings")
+
 solar_api = SolarAPI()
 
 class TelegramWebhookHandler:
@@ -192,8 +251,24 @@ class TelegramWebhookHandler:
         is_group_chat = update.effective_chat.type in ["group", "supergroup"]
         is_bot_mentioned = False
 
-        # Get the bot's username
-        bot_username = bot.username if bot else None
+        # Get the bot's username safely
+        bot_username = None
+        try:
+            if bot:
+                # Try to get username, initializing if needed
+                try:
+                    bot_username = bot.username
+                except RuntimeError as re:
+                    if "not properly initialized" in str(re):
+                        logger.info("Bot not initialized, attempting to initialize...")
+                        await bot.initialize()
+                        bot_username = bot.username
+                    else:
+                        raise re
+        except Exception as e:
+            logger.warning(f"Could not get bot username: {e}")
+            bot_username = None
+            
         logger.info(f"Bot username: {bot_username}")
 
         # Check for bot mentions
@@ -205,7 +280,7 @@ class TelegramWebhookHandler:
             for entity in update.message.entities:
                 if entity.type == 'mention':
                     mention = update.message.text[entity.offset:entity.offset + entity.length]
-                    if mention.lower() == f"@{bot_username.lower()}":
+                    if bot_username and mention.lower() == f"@{bot_username.lower()}":
                         is_bot_mentioned = True
                         break
         
