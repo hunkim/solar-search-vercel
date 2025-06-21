@@ -139,12 +139,17 @@ class TestTelegramWebhookHandler:
         mock_status_message.message_id = 456
         mock_bot.send_message.return_value = mock_status_message
         
-        with patch.object(self.handler.solar_api, 'complete') as mock_complete:
-            mock_complete.return_value = "Test answer"
+        with patch.object(self.handler.solar_api, 'intelligent_complete') as mock_intelligent:
+            mock_intelligent.return_value = {
+                'answer': 'Test answer',
+                'search_used': False,
+                'sources': [],
+                'search_queries': []
+            }
             
             await self.handler.handle_text(mock_update, mock_bot)
             
-            mock_complete.assert_called_once()
+            mock_intelligent.assert_called_once()
             mock_bot.send_message.assert_called()
     
     @pytest.mark.asyncio
@@ -167,12 +172,24 @@ class TestTelegramWebhookHandler:
         mock_status_message.message_id = 456
         mock_bot.send_message.return_value = mock_status_message
         
-        with patch.object(self.handler.solar_api, 'complete') as mock_complete:
-            mock_complete.return_value = "Test answer"
+        with patch.object(self.handler.solar_api, 'intelligent_complete') as mock_intelligent:
+            mock_intelligent.return_value = {
+                'answer': 'Test answer',
+                'search_used': True,
+                'sources': [
+                    {
+                        'id': 1,
+                        'title': 'Test Source',
+                        'url': 'https://example.com',
+                        'content': 'Test content'
+                    }
+                ],
+                'search_queries': ['test query', 'another query']
+            }
             
             await self.handler.handle_text(mock_update, mock_bot)
             
-            mock_complete.assert_called_once()
+            mock_intelligent.assert_called_once()
             # Should send two messages: answer + sources
             assert mock_bot.send_message.call_count >= 1
     
@@ -196,8 +213,8 @@ class TestTelegramWebhookHandler:
         mock_status_message.message_id = 456
         mock_bot.send_message.return_value = mock_status_message
         
-        with patch.object(self.handler.solar_api, 'complete') as mock_complete:
-            mock_complete.side_effect = Exception("Test error")
+        with patch.object(self.handler.solar_api, 'intelligent_complete') as mock_intelligent:
+            mock_intelligent.side_effect = Exception("Test error")
             
             await self.handler.handle_text(mock_update, mock_bot)
             

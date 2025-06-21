@@ -263,47 +263,61 @@ class TelegramWebhookHandler:
         # Send initial status message
         status_message = await bot.send_message(
             chat_id=update.effective_chat.id,
-            text=f"🔍 Searching for {user_question[:30]}..."
+            text=f"🤔 Analyzing your question: <i>{user_question[:50]}{'...' if len(user_question) > 50 else ''}</i>",
+            parse_mode="HTML"
         )
 
         try:
-            # Get response from Solar API with grounding
-            accumulated_text = ""
-            sources = []
+            # Use intelligent complete for better search decision making
+            search_queries_used = []
             
             def stream_callback(content: str):
-                nonlocal accumulated_text
-                if content:
-                    accumulated_text += content
+                # For streaming updates during response generation
+                pass
+            
+            def search_done_callback(search_sources: list, queries: list = None):
+                nonlocal search_queries_used
+                if queries:
+                    search_queries_used.extend(queries)
+                    logger.info(f"Search queries used: {queries}")
+                if search_sources:
+                    logger.info(f"Found {len(search_sources)} sources")
 
-            def search_done_callback(search_sources: list):
-                nonlocal sources
-                sources.extend(search_sources)
-                if sources:
-                    logger.info(f"Found {len(sources)} sources")
-                    for idx, source in enumerate(sources):
-                        logger.info(f"Source {idx+1}: {source.get('title', 'N/A')}, {source.get('url', 'N/A')}")
-
-            # Call Solar API (this is blocking, so we'll run it in a thread)
+            # Call Solar API with intelligent complete
             result = await asyncio.to_thread(
-                self.solar_api.complete,
+                self.solar_api.intelligent_complete,
+                user_question,
                 model="solar-pro2-preview",
-                prompt=user_question,
-                search_grounding=True,
-                return_sources=True,
                 stream=True,
-                on_update=stream_callback,
-                search_done_callback=search_done_callback
+                on_update=stream_callback
             )
-
+            
+            # Extract response components
+            answer_text = result.get('answer', '')
+            search_used = result.get('search_used', False)
+            sources = result.get('sources', [])
+            search_queries = result.get('search_queries', [])
+            
             # Clean the text before sending to Telegram
-            cleaned_text = self._clean_text(accumulated_text)
+            cleaned_text = self._clean_text(answer_text)
+            
+            # Prepare the response message
+            response_parts = []
+            
+            # Add search info if search was used
+            if search_used and search_queries:
+                search_info = "🔍 <b>Search queries:</b> " + ", ".join([f"<i>{q}</i>" for q in search_queries])
+                response_parts.append(search_info)
+            
+            response_parts.append(f"⚡<b>Answer:</b>\n{cleaned_text}")
+            
+            final_message = "\n\n".join(response_parts)
             
             # Update with final answer
             await bot.edit_message_text(
                 chat_id=update.effective_chat.id,
                 message_id=status_message.message_id,
-                text=f"⚡<b>Answer:</b>\n{cleaned_text}",
+                text=final_message,
                 parse_mode="HTML",
                 disable_web_page_preview=True
             )
@@ -313,7 +327,7 @@ class TelegramWebhookHandler:
                 try:
                     citation_result_json = await asyncio.to_thread(
                         self.solar_api.add_citations,
-                        response_text=accumulated_text,
+                        response_text=answer_text,
                         sources=sources
                     )
 
