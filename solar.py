@@ -29,7 +29,7 @@ class SolarAPI:
         from citations import CitationManager
         self.citation_manager = CitationManager(self)
     
-    def intelligent_complete(self, user_query, model="solar-pro-nightly", stream=False, on_update=None, on_search_start=None, on_search_done=None):
+    def intelligent_complete(self, user_query, model="solar-pro-nightly", stream=False, on_update=None, on_search_start=None, on_search_done=None, on_search_queries_generated=None):
         """
         Intelligently complete a user query by determining if web search is needed,
         and providing either direct answers or search-grounded responses.
@@ -41,43 +41,40 @@ class SolarAPI:
             on_update (callable): Function to call with each update when streaming
             on_search_start (callable): Function to call when search process starts
             on_search_done (callable): Function to call when search is completed with sources
+            on_search_queries_generated (callable): Function to call when search queries are generated
         
         Returns:
             dict: Response with 'answer', 'search_used' (bool), and 'sources' (if search was used)
         """
         
-        # Step 1: Start three concurrent processes
+        # Step 1: Start concurrent processes for search decision and query extraction
         with ThreadPoolExecutor(max_workers=3) as executor:
-            # Future 1: Check if search is needed (Y/N)
+            # Future 1: Check if search is needed (Y/N) - fastest decision
             search_needed_future = executor.submit(
                 self._check_search_needed, user_query, model
             )
             
-            # Future 2: Direct LLM answer (backup if no search needed)
-            direct_answer_future = executor.submit(
-                self._get_direct_answer, user_query, model, stream, on_update
-            )
-            
-            # Future 3: Extract search queries (in case search is needed)
+            # Future 2: Extract search queries (run in parallel with decision)
             search_queries_future = executor.submit(
                 self._extract_search_queries_fast, user_query, model
             )
             
-            # Wait for the search decision first (this should be fastest)
+            # Wait for both the search decision and queries to be ready
             search_needed = search_needed_future.result()
             
             if search_needed.upper().strip() == 'Y':
-                # Search is needed - cancel direct answer and proceed with search
-                direct_answer_future.cancel()
-                
-                # Notify that search is starting
+                # Search is needed - notify and get queries immediately
                 if on_search_start:
                     on_search_start()
                 
-                # Get search queries
+                # Get search queries and show them to user immediately
                 search_queries = search_queries_future.result()
                 
-                # Perform search and get grounded response
+                # Show search queries to user right away for best UX
+                if on_search_queries_generated:
+                    on_search_queries_generated(search_queries)
+                
+                # Now perform the actual search and get grounded response
                 response_data = self._get_search_grounded_response(
                     user_query, search_queries, model, stream, on_update, on_search_done
                 )
@@ -88,8 +85,13 @@ class SolarAPI:
                     'sources': response_data.get('sources', [])
                 }
             else:
-                # No search needed - cancel search queries and use direct answer
+                # No search needed - cancel search queries and get direct answer
                 search_queries_future.cancel()
+                
+                # Start the direct answer now (we didn't start it earlier to save resources)
+                direct_answer_future = executor.submit(
+                    self._get_direct_answer, user_query, model, stream, on_update
+                )
                 
                 # Get the direct answer
                 direct_answer = direct_answer_future.result()
@@ -102,7 +104,12 @@ class SolarAPI:
     
     def _check_search_needed(self, user_query, model):
         """Check if the user query requires web search. Returns Y or N."""
+        from datetime import datetime
+        current_date = datetime.now().strftime("%B %d, %Y")  # e.g., "December 13, 2024"
+        
         prompt = f"""Determine if this user query requires current/recent information from web search to provide a complete and accurate answer.
+
+TODAY'S DATE: {current_date}
 
 User Query: "{user_query}"
 
@@ -111,6 +118,8 @@ Consider:
 - Does it require real-time data (stock prices, weather, sports scores)?
 - Does it ask about recent developments in technology, politics, or other rapidly changing fields?
 - Does it require information that might have changed recently?
+- Does it use time-sensitive terms like "today", "recent", "latest", "current", "now"?
+- Does it ask about events that happened after my training data cutoff?
 
 Return ONLY a single character: Y (if web search is needed) or N (if general knowledge is sufficient).
 
@@ -119,8 +128,11 @@ Examples:
 - "How do I implement a binary search in Python?" → N  
 - "What are the latest developments in AI?" → Y
 - "What is the current stock price of Apple?" → Y
+- "What happened today in the news?" → Y
+- "What's the weather today?" → Y
 - "Who won the recent elections in South Korea?" → Y
 - "Explain quantum computing" → N
+- "What are today's trending topics?" → Y
 
 Answer (Y or N only):"""
 
@@ -501,6 +513,7 @@ Keep your tone friendly but efficient.
         
         # Full content accumulated across all chunks
         full_content = ""
+        chunk_count = 0
         
         for event in client.events():
             if event.data == "[DONE]":
@@ -513,6 +526,7 @@ Keep your tone friendly but efficient.
                     if "content" in delta and delta["content"]:
                         content = delta["content"]
                         full_content += content
+                        chunk_count += 1
                         
                         # Call the callback function with the new content
                         if on_update:

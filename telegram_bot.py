@@ -243,7 +243,7 @@ class TelegramBot:
         user_question = user_question.strip()
         
         # Start with initial status message
-        status_message = await update.message.reply_text(f"🤔 Analyzing: {user_question[:30]}...")
+        status_message = await update.message.reply_text(f"🤔 Analyzing: {user_question[:50]}...")
 
         try:
             # Variables to track the process
@@ -252,11 +252,11 @@ class TelegramBot:
             sources = []
             search_used = False
             
-            # Throttling parameters for streaming
+            # More responsive throttling parameters for streaming
             last_update_time = time.time()
             last_update_length = 0
-            min_update_interval = 0.5  # Min seconds between edits
-            min_update_chars = 50      # Min new characters before attempting edit
+            min_update_interval = 0.3  # Reduced from 0.5 to 0.3 seconds
+            min_update_chars = 25      # Reduced from 50 to 25 characters
 
             # Callback functions for the intelligent API
             def on_search_start():
@@ -266,7 +266,20 @@ class TelegramBot:
                 # This runs in a separate thread, so we need to use call_soon_threadsafe
                 loop = asyncio.get_event_loop()
                 asyncio.run_coroutine_threadsafe(
-                    status_message.edit_text(f"🔍 Searching for information about: {user_question[:30]}..."),
+                    status_message.edit_text(f"🔍 Search needed. Generating queries..."),
+                    loop
+                )
+
+            def on_search_queries_generated(queries):
+                """Called when search queries are generated - show immediately"""
+                nonlocal search_queries
+                search_queries = queries
+                logger.info(f"Search queries generated: {queries}")
+                # Show the search queries to the user immediately for best UX
+                queries_text = ", ".join(queries[:3])  # Show up to 3 queries
+                loop = asyncio.get_event_loop()
+                asyncio.run_coroutine_threadsafe(
+                    status_message.edit_text(f"🔍 <b>Searching:</b> {queries_text[:90]}..."),
                     loop
                 )
 
@@ -275,6 +288,12 @@ class TelegramBot:
                 nonlocal sources
                 sources = search_sources
                 logger.info(f"Search completed with {len(sources)} sources")
+                # Update status to show search completion and start generating
+                loop = asyncio.get_event_loop()
+                asyncio.run_coroutine_threadsafe(
+                    status_message.edit_text(f"✅ Found {len(sources)} sources. Generating answer..."),
+                    loop
+                )
 
             def on_update(content):
                 """Called for each streaming update"""
@@ -284,21 +303,34 @@ class TelegramBot:
                 current_time = time.time()
                 current_length = len(accumulated_text)
 
-                # Check throttling conditions
-                if (current_length > last_update_length and
-                    current_length - last_update_length >= min_update_chars and
-                    current_time - last_update_time >= min_update_interval):
-                    
+                # Log streaming activity for debugging
+                logger.debug(f"Streaming update: +{len(content)} chars, total: {current_length}")
+
+                # More responsive throttling conditions
+                should_update = (
+                    current_length > last_update_length and
+                    (current_length - last_update_length >= min_update_chars or
+                     current_time - last_update_time >= min_update_interval * 2)  # Allow longer interval for smaller updates
+                )
+
+                if should_update:
                     try:
                         # Clean the text before sending to Telegram
                         cleaned_text = self._clean_text(accumulated_text)
                         # Use different prefixes based on whether search was used
                         prefix = "🌐 <b>Answer:</b>" if search_used else "🧠 <b>Answer:</b>"
                         
+                        # Truncate if too long to avoid Telegram API limits
+                        display_text = cleaned_text
+                        if len(display_text) > 3500:  # Leave room for prefix and "..."
+                            display_text = display_text[:3500] + "..."
+                        
+                        logger.debug(f"Updating Telegram message, length: {len(display_text)}")
+                        
                         loop = asyncio.get_event_loop()
                         asyncio.run_coroutine_threadsafe(
                             status_message.edit_text(
-                                f"{prefix} {cleaned_text}...",
+                                f"{prefix} {display_text}",
                                 parse_mode="HTML",
                                 disable_web_page_preview=True
                             ),
@@ -306,10 +338,12 @@ class TelegramBot:
                         )
                         last_update_length = current_length
                         last_update_time = current_time
+                        logger.debug("Telegram message updated successfully")
                     except Exception as e:
                         logger.warning(f"Error updating streaming message: {e}")
 
-            # Use the intelligent API in a separate thread
+            # Use the intelligent API with all callbacks including search queries
+            logger.info(f"Starting intelligent_complete for: {user_question[:50]}...")
             result = await asyncio.to_thread(
                 self.solar_api.intelligent_complete,
                 user_query=user_question,
@@ -317,8 +351,10 @@ class TelegramBot:
                 stream=True,
                 on_update=on_update,
                 on_search_start=on_search_start,
-                on_search_done=on_search_done
+                on_search_done=on_search_done,
+                on_search_queries_generated=on_search_queries_generated
             )
+            logger.info(f"Intelligent_complete finished. Search used: {result.get('search_used', False)}")
 
             # Get the final result
             final_answer = result['answer']
@@ -328,6 +364,10 @@ class TelegramBot:
             # Update the final message
             cleaned_text = self._clean_text(final_answer)
             prefix = "🌐 <b>Answer:</b>" if search_was_used else "🧠 <b>Answer:</b>"
+            
+            # Ensure we don't exceed Telegram's message length limit
+            if len(cleaned_text) > 3800:
+                cleaned_text = cleaned_text[:3800] + "..."
             
             await status_message.edit_text(
                 f"{prefix} {cleaned_text}",
