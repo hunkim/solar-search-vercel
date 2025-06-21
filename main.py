@@ -383,10 +383,10 @@ class TelegramWebhookHandler:
                         # Use different prefixes based on whether search was used
                         prefix = "🌐 <b>Answer:</b>" if search_used else "🧠 <b>Answer:</b>"
                         
-                        # Truncate if too long to avoid Telegram API limits
+                        # Truncate if too long to avoid Telegram API limits during streaming
                         display_text = cleaned_text
-                        if len(display_text) > 3500:
-                            display_text = display_text[:3500] + "..."
+                        if len(display_text) > 3800:  # More generous for streaming
+                            display_text = display_text[:3800] + "..."
                         
                         if main_loop:
                             asyncio.run_coroutine_threadsafe(
@@ -421,22 +421,22 @@ class TelegramWebhookHandler:
             search_was_used = result['search_used']
             final_sources = result['sources']
 
-            # Update the final message if we haven't been streaming properly
-            if not accumulated_text:
-                cleaned_text = self._clean_text(final_answer)
-                prefix = "🌐 <b>Answer:</b>" if search_was_used else "🧠 <b>Answer:</b>"
-                
-                # Ensure we don't exceed Telegram's message length limit
-                if len(cleaned_text) > 3800:
-                    cleaned_text = cleaned_text[:3800] + "..."
-                
-                await bot.edit_message_text(
-                    chat_id=update.effective_chat.id,
-                    message_id=status_message.message_id,
-                    text=f"{prefix} {cleaned_text}",
-                    parse_mode="HTML",
-                    disable_web_page_preview=True
-                )
+            # Always update with the final complete message to ensure nothing is truncated
+            cleaned_text = self._clean_text(final_answer)
+            prefix = "🌐 <b>Answer:</b>" if search_was_used else "🧠 <b>Answer:</b>"
+            
+            # For Telegram's message length limit, we need to be more generous
+            # Telegram actually supports up to 4096 characters
+            if len(cleaned_text) > 4000:
+                cleaned_text = cleaned_text[:4000] + "..."
+            
+            await bot.edit_message_text(
+                chat_id=update.effective_chat.id,
+                message_id=status_message.message_id,
+                text=f"{prefix} {cleaned_text}",
+                parse_mode="HTML",
+                disable_web_page_preview=True
+            )
 
             # If search was used, show sources
             if search_was_used and final_sources:

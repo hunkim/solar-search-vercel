@@ -329,10 +329,10 @@ class TelegramBot:
                         # Use different prefixes based on whether search was used
                         prefix = "🌐 <b>Answer:</b>" if search_used else "🧠 <b>Answer:</b>"
                         
-                        # Truncate if too long to avoid Telegram API limits
+                        # Truncate if too long to avoid Telegram API limits during streaming
                         display_text = cleaned_text
-                        if len(display_text) > 3500:  # Leave room for prefix and "..."
-                            display_text = display_text[:3500] + "..."
+                        if len(display_text) > 3800:  # More generous for streaming
+                            display_text = display_text[:3800] + "..."
                         
                         logger.debug(f"Updating Telegram message, length: {len(display_text)}")
                         
@@ -373,9 +373,10 @@ class TelegramBot:
             cleaned_text = self._clean_text(final_answer)
             prefix = "🌐 <b>Answer:</b>" if search_was_used else "🧠 <b>Answer:</b>"
             
-            # Ensure we don't exceed Telegram's message length limit
-            if len(cleaned_text) > 3800:
-                cleaned_text = cleaned_text[:3800] + "..."
+            # For Telegram's message length limit, we need to be more generous
+            # Telegram actually supports up to 4096 characters
+            if len(cleaned_text) > 4000:
+                cleaned_text = cleaned_text[:4000] + "..."
             
             await status_message.edit_text(
                 f"{prefix} {cleaned_text}",
