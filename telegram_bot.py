@@ -258,17 +258,22 @@ class TelegramBot:
             min_update_interval = 0.3  # Reduced from 0.5 to 0.3 seconds
             min_update_chars = 25      # Reduced from 50 to 25 characters
 
+            # Get the main event loop once for all callbacks
+            main_loop = asyncio.get_running_loop()
+
             # Callback functions for the intelligent API
             def on_search_start():
                 """Called when search is detected as needed"""
                 nonlocal search_used
                 search_used = True
                 # This runs in a separate thread, so we need to use call_soon_threadsafe
-                loop = asyncio.get_event_loop()
-                asyncio.run_coroutine_threadsafe(
-                    status_message.edit_text(f"🔍 Search needed. Generating queries..."),
-                    loop
-                )
+                try:
+                    asyncio.run_coroutine_threadsafe(
+                        status_message.edit_text(f"🔍 Search needed. Generating queries..."),
+                        main_loop
+                    )
+                except Exception as e:
+                    logger.warning(f"Error updating search start message: {e}")
 
             def on_search_queries_generated(queries):
                 """Called when search queries are generated - show immediately"""
@@ -277,11 +282,13 @@ class TelegramBot:
                 logger.info(f"Search queries generated: {queries}")
                 # Show the search queries to the user immediately for best UX
                 queries_text = ", ".join(queries[:3])  # Show up to 3 queries
-                loop = asyncio.get_event_loop()
-                asyncio.run_coroutine_threadsafe(
-                    status_message.edit_text(f"🔍 <b>Searching:</b> {queries_text[:90]}..."),
-                    loop
-                )
+                try:
+                    asyncio.run_coroutine_threadsafe(
+                        status_message.edit_text(f"🔍 <b>Searching:</b> {queries_text[:90]}..."),
+                        main_loop
+                    )
+                except Exception as e:
+                    logger.warning(f"Error updating search queries message: {e}")
 
             def on_search_done(search_sources):
                 """Called when search is completed with sources"""
@@ -289,11 +296,13 @@ class TelegramBot:
                 sources = search_sources
                 logger.info(f"Search completed with {len(sources)} sources")
                 # Update status to show search completion and start generating
-                loop = asyncio.get_event_loop()
-                asyncio.run_coroutine_threadsafe(
-                    status_message.edit_text(f"✅ Found {len(sources)} sources. Generating answer..."),
-                    loop
-                )
+                try:
+                    asyncio.run_coroutine_threadsafe(
+                        status_message.edit_text(f"✅ Found {len(sources)} sources. Generating answer..."),
+                        main_loop
+                    )
+                except Exception as e:
+                    logger.warning(f"Error updating search done message: {e}")
 
             def on_update(content):
                 """Called for each streaming update"""
@@ -327,14 +336,13 @@ class TelegramBot:
                         
                         logger.debug(f"Updating Telegram message, length: {len(display_text)}")
                         
-                        loop = asyncio.get_event_loop()
                         asyncio.run_coroutine_threadsafe(
                             status_message.edit_text(
                                 f"{prefix} {display_text}",
                                 parse_mode="HTML",
                                 disable_web_page_preview=True
                             ),
-                            loop
+                            main_loop
                         )
                         last_update_length = current_length
                         last_update_time = current_time

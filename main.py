@@ -283,52 +283,144 @@ class TelegramWebhookHandler:
                 if search_sources:
                     logger.info(f"Found {len(search_sources)} sources")
 
-            # Call Solar API with intelligent complete
+            # Variables to track the process
+            accumulated_text = ""
+            search_queries = []
+            sources = []
+            search_used = False
+            
+            # More responsive throttling parameters for streaming
+            last_update_time = time.time()
+            last_update_length = 0
+            min_update_interval = 0.3
+            min_update_chars = 25
+
+            # Callback functions for the intelligent API
+            def on_search_start():
+                """Called when search is detected as needed"""
+                nonlocal search_used
+                search_used = True
+                # Update status message
+                asyncio.create_task(
+                    bot.edit_message_text(
+                        chat_id=update.effective_chat.id,
+                        message_id=status_message.message_id,
+                        text=f"🔍 Search needed. Generating queries..."
+                    )
+                )
+
+            def on_search_queries_generated(queries):
+                """Called when search queries are generated - show immediately"""
+                nonlocal search_queries
+                search_queries = queries
+                logger.info(f"Search queries generated: {queries}")
+                # Show the search queries to the user immediately for best UX
+                queries_text = ", ".join(queries[:3])  # Show up to 3 queries
+                asyncio.create_task(
+                    bot.edit_message_text(
+                        chat_id=update.effective_chat.id,
+                        message_id=status_message.message_id,
+                        text=f"🔍 <b>Searching:</b> {queries_text[:90]}...",
+                        parse_mode="HTML"
+                    )
+                )
+
+            def on_search_done(search_sources):
+                """Called when search is completed with sources"""
+                nonlocal sources
+                sources = search_sources
+                logger.info(f"Search completed with {len(sources)} sources")
+                # Update status to show search completion and start generating
+                asyncio.create_task(
+                    bot.edit_message_text(
+                        chat_id=update.effective_chat.id,
+                        message_id=status_message.message_id,
+                        text=f"✅ Found {len(sources)} sources. Generating answer..."
+                    )
+                )
+
+            def on_update(content):
+                """Called for each streaming update"""
+                nonlocal accumulated_text, last_update_length, last_update_time
+                accumulated_text += content
+                
+                current_time = time.time()
+                current_length = len(accumulated_text)
+
+                # More responsive throttling conditions
+                should_update = (
+                    current_length > last_update_length and
+                    (current_length - last_update_length >= min_update_chars or
+                     current_time - last_update_time >= min_update_interval * 2)
+                )
+
+                if should_update:
+                    try:
+                        # Clean the text before sending to Telegram
+                        cleaned_text = self._clean_text(accumulated_text)
+                        # Use different prefixes based on whether search was used
+                        prefix = "🌐 <b>Answer:</b>" if search_used else "🧠 <b>Answer:</b>"
+                        
+                        # Truncate if too long to avoid Telegram API limits
+                        display_text = cleaned_text
+                        if len(display_text) > 3500:
+                            display_text = display_text[:3500] + "..."
+                        
+                        asyncio.create_task(
+                            bot.edit_message_text(
+                                chat_id=update.effective_chat.id,
+                                message_id=status_message.message_id,
+                                text=f"{prefix} {display_text}",
+                                parse_mode="HTML",
+                                disable_web_page_preview=True
+                            )
+                        )
+                        last_update_length = current_length
+                        last_update_time = current_time
+                    except Exception as e:
+                        logger.warning(f"Error updating streaming message: {e}")
+
+            # Call Solar API with all callbacks
             result = await asyncio.to_thread(
                 self.solar_api.intelligent_complete,
-                user_question,
+                user_query=user_question,
                 model="solar-pro2-preview",
                 stream=True,
-                on_update=stream_callback
+                on_update=on_update,
+                on_search_start=on_search_start,
+                on_search_done=on_search_done,
+                on_search_queries_generated=on_search_queries_generated
             )
             
-            # Extract response components
-            answer_text = result.get('answer', '')
-            search_used = result.get('search_used', False)
-            sources = result.get('sources', [])
-            search_queries = result.get('search_queries', [])
-            
-            # Clean the text before sending to Telegram
-            cleaned_text = self._clean_text(answer_text)
-            
-            # Prepare the response message
-            response_parts = []
-            
-            # Add search info if search was used
-            if search_used and search_queries:
-                search_info = "🔍 <b>Search queries:</b> " + ", ".join([f"<i>{q}</i>" for q in search_queries])
-                response_parts.append(search_info)
-            
-            response_parts.append(f"⚡<b>Answer:</b>\n{cleaned_text}")
-            
-            final_message = "\n\n".join(response_parts)
-            
-            # Update with final answer
-            await bot.edit_message_text(
-                chat_id=update.effective_chat.id,
-                message_id=status_message.message_id,
-                text=final_message,
-                parse_mode="HTML",
-                disable_web_page_preview=True
-            )
+            # Get the final result
+            final_answer = result['answer']
+            search_was_used = result['search_used']
+            final_sources = result['sources']
 
-            # Process citations if sources are available
-            if sources:
+            # Update the final message if we haven't been streaming properly
+            if not accumulated_text:
+                cleaned_text = self._clean_text(final_answer)
+                prefix = "🌐 <b>Answer:</b>" if search_was_used else "🧠 <b>Answer:</b>"
+                
+                # Ensure we don't exceed Telegram's message length limit
+                if len(cleaned_text) > 3800:
+                    cleaned_text = cleaned_text[:3800] + "..."
+                
+                await bot.edit_message_text(
+                    chat_id=update.effective_chat.id,
+                    message_id=status_message.message_id,
+                    text=f"{prefix} {cleaned_text}",
+                    parse_mode="HTML",
+                    disable_web_page_preview=True
+                )
+
+            # If search was used, show sources
+            if search_was_used and final_sources:
                 try:
                     citation_result_json = await asyncio.to_thread(
                         self.solar_api.add_citations,
-                        response_text=answer_text,
-                        sources=sources
+                        response_text=final_answer,
+                        sources=final_sources
                     )
 
                     # Parse the citation result
@@ -337,10 +429,10 @@ class TelegramWebhookHandler:
                         references = citation_data.get("references", [])
 
                         # If no references were found from parsing, use the source data directly
-                        if not references and sources:
+                        if not references and final_sources:
                             logger.info("No citations found in text, using direct sources instead")
                             references = []
-                            for idx, source in enumerate(sources):
+                            for idx, source in enumerate(final_sources):
                                 references.append({
                                     "number": idx + 1,
                                     "url": source.get("url", ""),
@@ -389,10 +481,10 @@ class TelegramWebhookHandler:
                     except (json.JSONDecodeError, Exception) as e:
                         logger.error(f"Error processing citation JSON: {e}")
                         # Fallback to display sources directly
-                        if sources:
+                        if final_sources:
                             plain_message = "Sources:\n" + "\n".join([
                                 f"[{idx+1}] {source.get('title', 'Source')}: {source.get('url', '')}" 
-                                for idx, source in enumerate(sources)
+                                for idx, source in enumerate(final_sources)
                             ])
                             await bot.send_message(
                                 chat_id=update.effective_chat.id,
