@@ -160,14 +160,39 @@ Answer (Y or N only):"""
     def _get_direct_answer(self, user_query, model, stream, on_update):
         """Get direct answer from LLM without search."""
         try:
-            return self.complete(user_query, model=model, stream=stream, on_update=on_update)
+            from datetime import datetime
+            current_date = datetime.now().strftime("%B %d, %Y")  # e.g., "December 13, 2024"
+            current_year = datetime.now().year
+            current_time = datetime.now().strftime("%I:%M %p %Z")  # e.g., "2:30 PM UTC"
+            
+            # Enhanced prompt with date context
+            enhanced_prompt = f"""Today's date: {current_date}
+Current year: {current_year}
+Current time: {current_time}
+
+User question: {user_query}
+
+Please provide a comprehensive answer to the user's question. If the question relates to current events, recent developments, or time-sensitive information, please note that your knowledge has a cutoff date and you may not have the most recent information. For such queries, recommend that the user search for the latest information online.
+
+Answer:"""
+            
+            return self.complete(enhanced_prompt, model=model, stream=stream, on_update=on_update)
         except Exception as e:
             print(f"Error getting direct answer: {e}")
             return f"I apologize, but I encountered an error processing your request: {str(e)}"
     
     def _extract_search_queries_fast(self, user_query, model):
         """Extract 2-3 search queries optimized for web search."""
+        from datetime import datetime
+        current_date = datetime.now().strftime("%B %d, %Y")  # e.g., "December 13, 2024"
+        current_year = datetime.now().year
+        current_month = datetime.now().strftime("%B %Y")  # e.g., "December 2024"
+        
         prompt = f"""Extract 2-3 concise search queries from this user question that would get the most relevant web search results.
+
+TODAY'S DATE: {current_date}
+CURRENT YEAR: {current_year}
+CURRENT MONTH: {current_month}
 
 User Question: "{user_query}"
 
@@ -177,12 +202,22 @@ Rules:
 - Include technical terms and proper nouns
 - For comparisons, create separate queries for each item
 - Keep queries short but comprehensive
+- ADD DATE CONTEXT when relevant:
+  * Use "{current_year}" for recent/latest queries
+  * Use "today", "recent", "latest" for time-sensitive topics
+  * Use current month/year for very recent events
+  * Include "news" for current events
+  * Add "stock price today" for financial queries
+  * Use "current" for real-time data requests
 
 Return ONLY a JSON array: ["query1", "query2", "query3"]
 
 Examples:
-- "What are the latest AI developments?" → ["latest AI developments 2024", "artificial intelligence recent advances", "AI breakthrough news"]
-- "Compare iPhone vs Samsung" → ["iPhone 15 specifications features", "Samsung Galaxy S24 specs", "iPhone Samsung comparison 2024"]
+- "What are the latest AI developments?" → ["latest AI developments {current_year}", "artificial intelligence recent advances news", "AI breakthrough {current_month}"]
+- "Compare iPhone vs Samsung" → ["iPhone 15 specifications features {current_year}", "Samsung Galaxy S24 specs {current_year}", "iPhone Samsung comparison {current_year}"]
+- "What's the weather today?" → ["weather today current conditions", "weather forecast {current_date.split(',')[0]}", "current weather conditions"]
+- "Recent news about Tesla" → ["Tesla news {current_year}", "Tesla recent developments {current_month}", "Tesla latest news today"]
+- "Current Apple stock price" → ["Apple stock price today", "AAPL current stock price {current_year}", "Apple share price latest"]
 
 JSON array:"""
 
@@ -286,8 +321,16 @@ JSON array:"""
                 except Exception as e:
                     print(f"Error in on_search_done callback: {e}")
             
-            # Create grounded prompt
+            # Create grounded prompt with enhanced date context
+            current_date = datetime.now().strftime("%B %d, %Y")  # e.g., "December 13, 2024"
+            current_year = datetime.now().year
+            current_time = datetime.now().strftime("%I:%M %p %Z")  # e.g., "2:30 PM UTC"
+            
             grounded_prompt = f"""Use the following search results to answer the user's question comprehensively.
+
+TODAY'S DATE: {current_date}
+CURRENT YEAR: {current_year} 
+CURRENT TIME: {current_time}
 
 SEARCH RESULTS:
 {search_context}
@@ -299,8 +342,10 @@ INSTRUCTIONS:
 2. Be comprehensive but concise - provide complete information without being wordy
 3. Use information from the search results to provide current, accurate details
 4. Add citation numbers [1], [2], etc. after specific facts from the sources
-5. Consider today's date: {datetime.now().strftime("%Y-%m-%d")}
-6. If search results don't contain relevant information, briefly state that
+5. Consider the current date when interpreting "recent", "latest", "today", etc.
+6. If discussing time-sensitive information, mention when the information was published if available
+7. If search results don't contain relevant information, briefly state that
+8. For financial data, stock prices, or real-time information, note the time sensitivity
 
 Provide a well-structured, informative answer based on the search results:"""
             

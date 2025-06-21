@@ -23,9 +23,12 @@ class TelegramConfig:
     # Brief answer prompt template
     BRIEF_ANSWER_PROMPT = """Please provide a brief, concise answer suitable for Telegram messaging. Keep it under 3000 characters if possible.
 
+Today's date: {current_date}
+Current year: {current_year}
+
 User question: {user_question}
 
-Instructions: Be direct, clear, and concise. Use bullet points or numbered lists when appropriate. Avoid overly long explanations."""
+Instructions: Be direct, clear, and concise. Use bullet points or numbered lists when appropriate. Avoid overly long explanations. If the question relates to current events or time-sensitive information, consider the current date context provided above."""
 
 
 class TelegramFormatter:
@@ -157,7 +160,15 @@ class TelegramMessageHandler:
     @staticmethod
     def create_enhanced_query(user_question: str) -> str:
         """Create an enhanced query for brief Telegram responses"""
-        return TelegramConfig.BRIEF_ANSWER_PROMPT.format(user_question=user_question)
+        from datetime import datetime
+        current_date = datetime.now().strftime("%B %d, %Y")  # e.g., "December 13, 2024"
+        current_year = datetime.now().year
+        
+        return TelegramConfig.BRIEF_ANSWER_PROMPT.format(
+            user_question=user_question,
+            current_date=current_date,
+            current_year=current_year
+        )
     
     @staticmethod
     def should_update_stream(current_length: int, last_update_length: int, 
