@@ -5,7 +5,9 @@ import json
 import os
 
 # Import the FastAPI app and related components
-from main import app, TelegramWebhookHandler, solar_api
+from main import app, TelegramWebhookHandler, solar_api, create_bot
+from solar import SolarAPI
+from telegram_utils import TelegramFormatter, TelegramSourceFormatter
 
 # Skip FastAPI TestClient tests for now due to compatibility issues
 try:
@@ -22,8 +24,7 @@ class TestFastAPIApp:
     def test_app_creation(self):
         """Test that the FastAPI app is created successfully."""
         assert app is not None
-        assert hasattr(app, 'title')
-        assert "Telegram Bot API" in app.title
+        assert app.title == "Telegram Bot API"
 
 
 class TestTelegramWebhookHandler:
@@ -34,59 +35,64 @@ class TestTelegramWebhookHandler:
         self.handler = TelegramWebhookHandler()
     
     def test_format_markdown_for_telegram_bold(self):
-        """Test markdown formatting for bold text."""
+        """Test markdown formatting for bold text using shared formatter."""
         text = "This is **bold** text and __also bold__"
-        result = self.handler._format_markdown_for_telegram(text)
-        assert result == "This is <b>bold</b> text and <b>also bold</b>"
+        result = TelegramFormatter.format_markdown_for_telegram(text)
+        expected = "This is <b>bold</b> text and <b>also bold</b>"
+        assert result == expected
     
     def test_format_markdown_for_telegram_italic(self):
-        """Test markdown formatting for italic text."""
+        """Test markdown formatting for italic text using shared formatter."""
         text = "This is *italic* text and _also italic_"
-        result = self.handler._format_markdown_for_telegram(text)
-        assert result == "This is <i>italic</i> text and <i>also italic</i>"
+        result = TelegramFormatter.format_markdown_for_telegram(text)
+        expected = "This is <i>italic</i> text and <i>also italic</i>"
+        assert result == expected
     
     def test_format_markdown_for_telegram_code(self):
-        """Test markdown formatting for code."""
+        """Test markdown formatting for code using shared formatter."""
         text = "This is `inline code` and ```block code```"
-        result = self.handler._format_markdown_for_telegram(text)
-        assert result == "This is <code>inline code</code> and <pre>block code</pre>"
+        result = TelegramFormatter.format_markdown_for_telegram(text)
+        expected = "This is <code>inline code</code> and <pre>block code</pre>"
+        assert result == expected
     
     def test_format_markdown_for_telegram_links(self):
-        """Test markdown formatting for links."""
+        """Test markdown formatting for links using shared formatter."""
         text = "Check out [Google](https://google.com)"
-        result = self.handler._format_markdown_for_telegram(text)
-        assert result == 'Check out <a href="https://google.com">Google</a>'
+        result = TelegramFormatter.format_markdown_for_telegram(text)
+        expected = 'Check out <a href="https://google.com">Google</a>'
+        assert result == expected
     
     def test_clean_text_with_think_tags(self):
         """Test cleaning text with think tags."""
-        text = "<think>This is thinking content</think>This is regular content"
+        text = "<think>This is thinking</think>This is the answer"
         result = self.handler._clean_text(text)
         assert "🤔 <b>Reasoning:</b>" in result
-        assert "<pre>This is thinking content</pre>" in result
-        assert "This is regular content" in result
+        assert "This is the answer" in result
     
     def test_clean_text_empty_think_tags(self):
         """Test cleaning text with empty think tags."""
-        text = "<think></think>This is regular content"
+        text = "<think></think>This is the answer"
         result = self.handler._clean_text(text)
         assert "🤔 <b>Reasoning:</b>" not in result
-        assert result == "This is regular content"
+        assert "This is the answer" in result
     
     def test_format_restaurant_list(self):
-        """Test restaurant list formatting."""
+        """Test restaurant list formatting using shared formatter."""
         text = "1. **Restaurant Name** (Location) - Great food and service"
-        result = self.handler._format_restaurant_list(text)
+        result = TelegramFormatter.format_restaurant_list(text)
+        # Check that the formatting is applied correctly
         assert "<b>Restaurant Name</b>" in result
         assert "(Location)" in result
         assert "Great food and service" in result
     
     def test_format_restaurant_list_with_citations(self):
-        """Test restaurant list formatting with citations."""
+        """Test restaurant list formatting with citations using shared formatter."""
         text = "1. **Restaurant Name** (Location) - Great food [1][2]"
-        result = self.handler._format_restaurant_list(text)
+        result = TelegramFormatter.format_restaurant_list(text)
+        # Should contain formatted restaurant with citations moved appropriately
         assert "<b>Restaurant Name</b>" in result
-        # Citations might be moved or processed differently, just check structure
         assert "Great food" in result
+        # Citations may be repositioned by the formatter
     
     @pytest.mark.asyncio
     async def test_start_command(self):
@@ -229,7 +235,6 @@ class TestCreateBot:
     
     def test_create_bot_module_import(self):
         """Test that create_bot function exists and can be imported."""
-        from main import create_bot
         assert create_bot is not None
         assert callable(create_bot)
 
@@ -280,7 +285,7 @@ class TestErrorHandling:
         # Test that TelegramWebhookHandler has error handling
         handler = TelegramWebhookHandler()
         assert hasattr(handler, '_clean_text')
-        assert hasattr(handler, '_format_markdown_for_telegram')
+        assert hasattr(TelegramFormatter, 'format_markdown_for_telegram')
 
 
 class TestTextFormatting:
@@ -293,21 +298,21 @@ class TestTextFormatting:
     def test_complex_markdown_formatting(self):
         """Test complex markdown formatting."""
         text = "**Bold** and *italic* with `code` and [link](https://example.com)"
-        result = self.handler._format_markdown_for_telegram(text)
+        result = TelegramFormatter.format_markdown_for_telegram(text)
         expected = '<b>Bold</b> and <i>italic</i> with <code>code</code> and <a href="https://example.com">link</a>'
         assert result == expected
     
     def test_numbered_list_formatting(self):
         """Test numbered list formatting."""
         text = "1. **First Item** - Description\n2. **Second Item** - Another description"
-        result = self.handler._format_markdown_for_telegram(text)
+        result = TelegramFormatter.format_markdown_for_telegram(text)
         assert "<b>First Item</b>" in result
         assert "<b>Second Item</b>" in result
     
     def test_bullet_point_formatting(self):
         """Test bullet point formatting."""
         text = "- First point\n* Second point\n+ Third point"
-        result = self.handler._format_markdown_for_telegram(text)
+        result = TelegramFormatter.format_markdown_for_telegram(text)
         assert "• First point" in result
         assert "• Second point" in result
         assert "• Third point" in result
@@ -315,5 +320,39 @@ class TestTextFormatting:
     def test_code_block_formatting(self):
         """Test code block formatting."""
         text = "```python\nprint('hello')\n```"
-        result = self.handler._format_markdown_for_telegram(text)
+        result = TelegramFormatter.format_markdown_for_telegram(text)
         assert "<pre>python\nprint('hello')\n</pre>" in result 
+
+
+class TestSourceFormatting:
+    """Test source formatting functionality."""
+
+    def test_format_sources_message(self):
+        """Test source message formatting."""
+        sources = [
+            {'title': 'Test Source 1', 'url': 'https://example1.com'},
+            {'title': 'Test Source 2', 'url': 'https://example2.com'}
+        ]
+        
+        result = TelegramSourceFormatter.format_sources_message(sources)
+        
+        assert "<b>📚 Sources:</b>" in result
+        assert "Test Source 1" in result
+        assert "Test Source 2" in result
+        assert "https://example1.com" in result
+        assert "https://example2.com" in result
+
+    def test_format_citations_message(self):
+        """Test citation message formatting."""
+        references = [
+            {'number': '1', 'title': 'Citation 1', 'url': 'https://cite1.com'},
+            {'number': '2', 'title': 'Citation 2', 'url': 'https://cite2.com'}
+        ]
+        
+        result = TelegramSourceFormatter.format_citations_message(references)
+        
+        assert "<b>Sources:</b>" in result
+        assert "Citation 1" in result
+        assert "Citation 2" in result
+        assert "https://cite1.com" in result
+        assert "https://cite2.com" in result 

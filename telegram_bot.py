@@ -18,6 +18,12 @@ from telegram.ext import (
 )
 
 from solar import SolarAPI
+from telegram_utils import (
+    TelegramConfig,
+    TelegramFormatter,
+    TelegramMessageHandler,
+    TelegramSourceFormatter
+)
 
 # Load environment variables from .env.local
 load_dotenv('.env.local')
@@ -81,124 +87,13 @@ class TelegramBot:
             help_text, parse_mode="HTML", disable_web_page_preview=True
         )
     
-    def _format_markdown_for_telegram(self, text: str) -> str:
-        """Convert common Markdown syntax to Telegram-compatible HTML format."""
-        # Handle bold text: **text** or __text__ -> <b>text</b>
-        text = re.sub(r'\*\*(.*?)\*\*|__(.*?)__', lambda m: f'<b>{m.group(1) or m.group(2)}</b>', text)
-        
-        # Handle italic text: *text* or _text_ -> <i>text</i>
-        text = re.sub(r'\*(.*?)\*|_(.*?)_(?![*_])', lambda m: f'<i>{m.group(1) or m.group(2)}</i>', text)
-        
-        # Handle code blocks: ```text``` -> <pre>text</pre>
-        text = re.sub(r'```(.*?)```', lambda m: f'<pre>{m.group(1)}</pre>', text, flags=re.DOTALL)
-        
-        # Handle inline code: `text` -> <code>text</code>
-        text = re.sub(r'`(.*?)`', lambda m: f'<code>{m.group(1)}</code>', text)
-        
-        # Handle links: [text](url) -> <a href="url">text</a>
-        text = re.sub(r'\[(.*?)\]\((.*?)\)', lambda m: f'<a href="{m.group(2)}">{m.group(1)}</a>', text)
-        
-        # Process numbered lists with preservation of structure
-        def process_numbered_list(match):
-            number = match.group(1)
-            content = match.group(2)
-            return f"{number}. <b>{content}</b>\n"
-            
-        # Handle numbered lists with item title formatting (assumes format: "1. **Title** - content")
-        text = re.sub(r'(\d+)\.\s+\*\*(.*?)\*\*\s+(.*?)(?=\n\d+\.|\n\n|$)', 
-                      lambda m: f"{m.group(1)}. <b>{m.group(2)}</b>\n{m.group(3)}\n", 
-                      text, flags=re.DOTALL)
-        
-        # Handle bullet points with proper formatting
-        text = re.sub(r'^\s*[-*+]\s+(.*?)$', r'• \1', text, flags=re.MULTILINE)
-        
-        # Ensure proper paragraph breaks (double newlines)
-        text = re.sub(r'\n{3,}', '\n\n', text)
-        
-        # Handle soft breaks (replace single newlines within paragraphs with space)
-        # text = re.sub(r'(?<!\n)\n(?!\n)', ' ', text)
-        
-        return text
+
 
     def _clean_text(self, text: str) -> str:
-        """Clean text by formatting think tags and markdown into Telegram-compatible HTML."""
-        def escape_html(text):
-            """Escape HTML special characters."""
-            html_escape_table = {
-                "&": "&amp;",
-                '"': "&quot;",
-                "'": "&apos;",
-                ">": "&gt;",
-                "<": "&lt;",
-            }
-            return "".join(html_escape_table.get(c, c) for c in text)
+        """Clean text using shared Telegram formatter"""
+        return TelegramFormatter.clean_text(text)
 
-        def replace_think_section(match):
-            think_content = match.group(1).strip()
-            if not think_content:  # Skip empty thinking sections
-                return ""
-            # Format thinking content with markdown support
-            think_content = self._format_markdown_for_telegram(think_content)
-            # Format as a visually distinct section
-            return (
-                "\n\n🤔 <b>Reasoning:</b> (tap to copy)\n"
-                f"<pre>{think_content}</pre>\n"
-            )
-            
-        # Process structured restaurant lists before markdown formatting
-        text = self._format_restaurant_list(text)
 
-        # Handle think tags
-        text = re.sub(r'<think>(.*?)</think>', replace_think_section, text, flags=re.DOTALL)
-        
-        # Then format remaining text with markdown
-        text = self._format_markdown_for_telegram(text)
-        
-        # Clean up any remaining think tags
-        text = text.replace('<think>', '').replace('</think>', '')
-        
-        return text.strip()
-
-    def _format_restaurant_list(self, text: str) -> str:
-        """Process restaurant or numbered list patterns with proper formatting."""
-        # Pattern for numbered list items with titles and descriptions
-        # Example: 1. **Restaurant Name** (Location) - Description
-        pattern = r'(\d+)\.\s+\*\*(.*?)\*\*\s*(\(.*?\))?\s*(?:-|\n-)\s*(.*?)(?=\n\d+\.|\Z)'
-        
-        def format_restaurant_item(match):
-            number = match.group(1)
-            name = match.group(2)
-            location = match.group(3) or ""
-            description = match.group(4).strip()
-            
-            # Extract citation references like [1][2] and preserve them
-            citation_refs = re.findall(r'\[\d+\]', description)
-            if citation_refs:
-                citation_str = " ".join(citation_refs)
-                # Remove citations from main text to reposition them
-                description = re.sub(r'\[\d+\]', '', description)
-                # Clean up spacing after citation removal
-                description = re.sub(r'\s+', ' ', description)
-                description = description.strip()
-                # Add citation refs at the end of title line
-                location_with_citations = f"{location} {citation_str}".strip()
-            else:
-                location_with_citations = location
-            
-            # Format bullet points in description if they exist
-            description = re.sub(r'^\s*-\s+', '\n• ', description, flags=re.MULTILINE)
-            # Ensure description starts with newline for proper formatting
-            if not description.startswith('\n') and description:
-                description = '\n' + description
-                
-            # Format with line breaks for better readability
-            formatted_item = f"{number}. <b>{name}</b> {location}\n{description}\n"
-            return formatted_item
-            
-        # Apply pattern with flags to handle multiline entries
-        text = re.sub(pattern, format_restaurant_item, text, flags=re.DOTALL)
-        
-        return text
 
     async def handle_text(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Process user's question using the new intelligent Solar API."""
@@ -255,8 +150,6 @@ class TelegramBot:
             # Telegram-friendly throttling parameters to avoid flood control
             last_update_time = time.time()
             last_update_length = 0
-            min_update_interval = 2.0  # Increased to 2.0 seconds to avoid flood control
-            min_update_chars = 100     # Increased to 100 characters for more substantial updates
 
             # Get the main event loop once for all callbacks
             main_loop = asyncio.get_running_loop()
@@ -316,10 +209,8 @@ class TelegramBot:
                 logger.debug(f"Streaming update: +{len(content)} chars, total: {current_length}")
 
                 # Conservative throttling to avoid flood control
-                should_update = (
-                    current_length > last_update_length and
-                    current_length - last_update_length >= min_update_chars and
-                    current_time - last_update_time >= min_update_interval
+                should_update = TelegramMessageHandler.should_update_stream(
+                    current_length, last_update_length, current_time, last_update_time
                 )
 
                 if should_update:
@@ -330,9 +221,7 @@ class TelegramBot:
                         prefix = "🌐 <b>Answer:</b>" if search_used else "🧠 <b>Answer:</b>"
                         
                         # Truncate if too long to avoid Telegram API limits during streaming
-                        display_text = cleaned_text
-                        if len(display_text) > 3800:  # More generous for streaming
-                            display_text = display_text[:3800] + "..."
+                        display_text = TelegramMessageHandler.truncate_for_streaming(cleaned_text)
                         
                         logger.debug(f"Updating Telegram message, length: {len(display_text)}")
                         
@@ -351,11 +240,7 @@ class TelegramBot:
                         logger.warning(f"Error updating streaming message: {e}")
 
             # Enhance query for Telegram - request brief, concise answers
-            enhanced_query = f"""Please provide a brief, concise answer suitable for Telegram messaging. Keep it under 3000 characters if possible.
-
-User question: {user_question}
-
-Instructions: Be direct, clear, and concise. Use bullet points or numbered lists when appropriate. Avoid overly long explanations."""
+            enhanced_query = TelegramMessageHandler.create_enhanced_query(user_question)
 
             # Use the intelligent API with all callbacks including search queries
             logger.info(f"Starting intelligent_complete for: {user_question[:50]}...")
@@ -380,77 +265,36 @@ Instructions: Be direct, clear, and concise. Use bullet points or numbered lists
             cleaned_text = self._clean_text(final_answer)
             prefix = "🌐 <b>Answer:</b>" if search_was_used else "🧠 <b>Answer:</b>"
             
-            # For Telegram's message length limit, we need to be more generous
-            # Telegram actually supports up to 4096 characters
-            if len(cleaned_text) > 4000:
-                cleaned_text = cleaned_text[:4000] + "..."
+            # Truncate for final message
+            cleaned_text = TelegramMessageHandler.truncate_for_final(cleaned_text)
             
-            # Retry logic for final message to handle flood control
-            max_retries = 3
-            for attempt in range(max_retries):
+            # Send final message with retry logic
+            async def send_final_message():
+                return await status_message.edit_text(
+                    f"{prefix} {cleaned_text}",
+                    parse_mode="HTML",
+                    disable_web_page_preview=True
+                )
+            
+            try:
+                await TelegramMessageHandler.send_message_with_retry(send_final_message)
+            except Exception as e:
+                # Last resort: try sending as new message
                 try:
-                    await status_message.edit_text(
+                    await update.message.reply_text(
                         f"{prefix} {cleaned_text}",
                         parse_mode="HTML",
                         disable_web_page_preview=True
                     )
-                    break  # Success, exit retry loop
-                except Exception as e:
-                    if "flood control" in str(e).lower() and attempt < max_retries - 1:
-                        # Wait before retry for flood control
-                        wait_time = 5 * (attempt + 1)  # 5, 10, 15 seconds
-                        logger.warning(f"Flood control hit, waiting {wait_time}s before retry {attempt + 1}")
-                        await asyncio.sleep(wait_time)
-                    else:
-                        logger.error(f"Failed to send final message after {attempt + 1} attempts: {e}")
-                        if attempt == max_retries - 1:
-                            # Last attempt failed, try sending as new message
-                            try:
-                                await update.message.reply_text(
-                                    f"{prefix} {cleaned_text}",
-                                    parse_mode="HTML",
-                                    disable_web_page_preview=True
-                                )
-                            except Exception as final_e:
-                                logger.error(f"Failed to send final message as new message: {final_e}")
-                        break
+                except Exception as final_e:
+                    logger.error(f"Failed to send final message as new message: {final_e}")
 
             # If search was used, show sources
             if search_was_used and final_sources:
                 logger.info(f"Sending sources: {len(final_sources)} found")
                 
-                # Create sources message
-                sources_message = "<b>📚 Sources:</b>\n"
-                source_links = []
-                
-                for i, source in enumerate(final_sources[:10], 1):  # Limit to 10 sources
-                    title = source.get('title', 'Source')
-                    url = source.get('url', '')
-                    
-                    # Extract domain for display
-                    display_name = title
-                    if url:
-                        try:
-                            domain = urlparse(url).netloc
-                            if domain.startswith('www.'):
-                                domain = domain[4:]
-                            # Use domain if title is generic or missing
-                            if not title or title.lower() in ["source", "untitled", "no title"]:
-                                display_name = domain or "source"
-                        except Exception:
-                            pass
-                    
-                    # Ensure display name is not empty and escape HTML
-                    display_name = display_name or "source"
-                    display_name = display_name.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-                    
-                    # Create link if URL is present
-                    if url:
-                        source_links.append(f"[{i}] <a href='{url}'>{display_name}</a>")
-                    else:
-                        source_links.append(f"[{i}] {display_name}")
-
-                sources_message += "\n".join(source_links)
+                # Create sources message using shared formatter
+                sources_message = TelegramSourceFormatter.format_sources_message(final_sources)
 
                 try:
                     # Send sources as a separate message
