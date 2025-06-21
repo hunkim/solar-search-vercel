@@ -65,14 +65,20 @@ class SolarAPI:
             if search_needed.upper().strip() == 'Y':
                 # Search is needed - notify and get queries immediately
                 if on_search_start:
-                    on_search_start()
+                    try:
+                        on_search_start()
+                    except Exception as e:
+                        print(f"Error in on_search_start callback: {e}")
                 
                 # Get search queries and show them to user immediately
                 search_queries = search_queries_future.result()
                 
                 # Show search queries to user right away for best UX
                 if on_search_queries_generated:
-                    on_search_queries_generated(search_queries)
+                    try:
+                        on_search_queries_generated(search_queries)
+                    except Exception as e:
+                        print(f"Error in on_search_queries_generated callback: {e}")
                 
                 # Now perform the actual search and get grounded response
                 response_data = self._get_search_grounded_response(
@@ -215,7 +221,10 @@ JSON array:"""
                     }
                 ]
                 if on_search_done:
-                    on_search_done(sources)
+                    try:
+                        on_search_done(sources)
+                    except Exception as e:
+                        print(f"Error in on_search_done callback: {e}")
                 
                 response_text = self._get_direct_answer(user_query, model, stream, on_update)
                 return {
@@ -272,7 +281,10 @@ JSON array:"""
             
             # Call search done callback
             if on_search_done:
-                on_search_done(sources)
+                try:
+                    on_search_done(sources)
+                except Exception as e:
+                    print(f"Error in on_search_done callback: {e}")
             
             # Create grounded prompt
             grounded_prompt = f"""Use the following search results to answer the user's question comprehensively.
