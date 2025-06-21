@@ -47,6 +47,8 @@ class TelegramBot:
         # Command handlers
         self.application.add_handler(CommandHandler("start", self.start))
         self.application.add_handler(CommandHandler("help", self.help_command))
+        self.application.add_handler(CommandHandler("memory", self.memory_command))
+        self.application.add_handler(CommandHandler("clear", self.clear_command))
         
         # Text handler
         self.application.add_handler(
@@ -73,13 +75,16 @@ class TelegramBot:
             "☀️ <b>Welcome to Intelligent Solar Bot!</b>\n\n"
             "📚 <b>Basic Commands:</b>\n"
             "• /start - Start the bot\n"
-            "• /help - Show this help message\n\n"
+            "• /help - Show this help message\n"
+            "• /memory - Show memory status\n"
+            "• /clear - Clear all memory\n\n"
             "🤖 <b>How it works:</b>\n"
             "I intelligently decide whether your question needs current web information or can be answered with general knowledge:\n\n"
             "🧠 <b>Direct Answer:</b> For general knowledge, programming, science concepts\n"
             "🌐 <b>Web Search:</b> For current events, real-time data, recent news\n\n"
             "💡 <b>Usage:</b>\n"
             "Simply ask any question! I'll automatically choose the best approach and provide sources when using web search.\n\n"
+            "🧠 <b>Memory:</b> I remember our conversations to provide better context in future interactions.\n\n"
             "⚡️ Powered by <a href='https://console.upstage.ai'>Upstage SolarLLM</a>"
         )
 
@@ -87,7 +92,62 @@ class TelegramBot:
             help_text, parse_mode="HTML", disable_web_page_preview=True
         )
     
-
+    async def memory_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Show quick memory status when the command /memory is issued."""
+        try:
+            # Get memory statistics from the Solar API
+            memory_stats = self.solar_api.get_memory_stats()
+            
+            if memory_stats.get("memory_disabled", False):
+                await update.message.reply_text(
+                    "🧠 <b>Memory Status:</b> Disabled\n\n"
+                    "Memory functionality is currently disabled.",
+                    parse_mode="HTML"
+                )
+                return
+            
+            # Format memory statistics
+            total_conversations = memory_stats.get("total_conversations", 0)
+            word_count = memory_stats.get("word_count", 0)
+            has_summary = memory_stats.get("has_summary", False)
+            last_updated = memory_stats.get("last_updated", "Never")
+            
+            # Create status message
+            status_text = (
+                f"🧠 <b>Memory Status</b>\n\n"
+                f"💬 <b>Conversations:</b> {total_conversations}\n"
+                f"📝 <b>Word Count:</b> {word_count:,}\n"
+                f"📋 <b>Has Summary:</b> {'Yes' if has_summary else 'No'}\n"
+                f"🕒 <b>Last Updated:</b> {last_updated}\n\n"
+                f"Use /clear to clear all memory"
+            )
+            
+            await update.message.reply_text(status_text, parse_mode="HTML")
+            
+        except Exception as e:
+            logger.error(f"Error getting memory status: {e}")
+            await update.message.reply_text(
+                "❌ Error retrieving memory status. Please try again later."
+            )
+    
+    async def clear_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Clear all memory when the command /clear is issued."""
+        try:
+            # Clear memory using the Solar API
+            self.solar_api.clear_memory()
+            
+            await update.message.reply_text(
+                "🧹 <b>Memory Cleared!</b>\n\n"
+                "All conversation history and memory have been cleared.\n"
+                "Starting fresh! 🆕",
+                parse_mode="HTML"
+            )
+            
+        except Exception as e:
+            logger.error(f"Error clearing memory: {e}")
+            await update.message.reply_text(
+                "❌ Error clearing memory. Please try again later."
+            )
 
     def _clean_text(self, text: str) -> str:
         """Clean text using shared Telegram formatter"""
