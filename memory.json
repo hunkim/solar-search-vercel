@@ -1,0 +1,987 @@
+{
+  "conversations": [
+    {
+      "timestamp": "2025-06-21T11:59:08.309896",
+      "user_input": "What is machine learning?",
+      "assistant_response": "Machine learning is a subset of artificial intelligence.",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T11:59:08.311040",
+      "user_input": "Latest AI news",
+      "assistant_response": "Search result",
+      "sources": [
+        {
+          "title": "Test Source 1",
+          "url": "https://example.com/1"
+        },
+        {
+          "title": "Test Source 2",
+          "url": "https://example.com/2"
+        }
+      ],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T11:59:08.312353",
+      "user_input": "What is Python?",
+      "assistant_response": "Direct answer from LLM",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T11:59:08.314018",
+      "user_input": "What is the capital of France?",
+      "assistant_response": "Direct answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T11:59:08.314451",
+      "user_input": "How do I implement a binary search in Python?",
+      "assistant_response": "Direct answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T11:59:08.314903",
+      "user_input": "What are the latest developments in AI in 2024?",
+      "assistant_response": "Search-based answer",
+      "sources": [],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T11:59:08.315336",
+      "user_input": "What is the current stock price of Apple?",
+      "assistant_response": "Search-based answer",
+      "sources": [],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T11:59:08.316362",
+      "user_input": "Explain machine learning",
+      "assistant_response": "Test answer about machine learning",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T11:59:08.317148",
+      "user_input": "What is 2 + 2?",
+      "assistant_response": "2 + 2 = 4",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T11:59:08.319589",
+      "user_input": "Test query 0",
+      "assistant_response": "Concurrent answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T11:59:08.319888",
+      "user_input": "Test query 1",
+      "assistant_response": "Concurrent answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T11:59:08.320119",
+      "user_input": "Test query 2",
+      "assistant_response": "Concurrent answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T11:59:08.320763",
+      "user_input": "Performance test",
+      "assistant_response": "Fast answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T11:59:08.321467",
+      "user_input": "Test query",
+      "assistant_response": "Search result",
+      "sources": [],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T11:59:08.322271",
+      "user_input": "Test query",
+      "assistant_response": "Direct answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T11:59:08.330584",
+      "user_input": "test",
+      "assistant_response": "Direct",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T11:59:08.331130",
+      "user_input": "test",
+      "assistant_response": "Search",
+      "sources": [],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T11:59:08.390656",
+      "user_input": "What are the latest AI developments?",
+      "assistant_response": "Test response",
+      "sources": [
+        {
+          "id": 1,
+          "title": "Test Source",
+          "url": "http://test.com"
+        }
+      ],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro2-preview"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T11:59:08.391691",
+      "user_input": "What is Python?",
+      "assistant_response": "Direct answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro2-preview"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T11:59:08.495141",
+      "user_input": "Test query",
+      "assistant_response": "test",
+      "sources": [],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T11:59:08.498306",
+      "user_input": "Test",
+      "assistant_response": "test response",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T11:59:08.752528",
+      "user_input": "Test",
+      "assistant_response": "test",
+      "sources": [],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T11:59:08.753981",
+      "user_input": "Test",
+      "assistant_response": "Direct answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:00:22.196187",
+      "user_input": "What is machine learning?",
+      "assistant_response": "Machine learning is a subset of artificial intelligence.",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:00:22.197455",
+      "user_input": "Latest AI news",
+      "assistant_response": "Search result",
+      "sources": [
+        {
+          "title": "Test Source 1",
+          "url": "https://example.com/1"
+        },
+        {
+          "title": "Test Source 2",
+          "url": "https://example.com/2"
+        }
+      ],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:00:22.199086",
+      "user_input": "What is Python?",
+      "assistant_response": "Direct answer from LLM",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:00:22.200824",
+      "user_input": "What is the capital of France?",
+      "assistant_response": "Direct answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:00:22.201367",
+      "user_input": "How do I implement a binary search in Python?",
+      "assistant_response": "Direct answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:00:22.202246",
+      "user_input": "What are the latest developments in AI in 2024?",
+      "assistant_response": "Search-based answer",
+      "sources": [],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:00:22.202712",
+      "user_input": "What is the current stock price of Apple?",
+      "assistant_response": "Search-based answer",
+      "sources": [],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:00:22.203712",
+      "user_input": "Explain machine learning",
+      "assistant_response": "Test answer about machine learning",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:00:22.204860",
+      "user_input": "What is 2 + 2?",
+      "assistant_response": "2 + 2 = 4",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:00:22.207554",
+      "user_input": "Test query 0",
+      "assistant_response": "Concurrent answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:00:22.208104",
+      "user_input": "Test query 1",
+      "assistant_response": "Concurrent answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:00:22.208669",
+      "user_input": "Test query 2",
+      "assistant_response": "Concurrent answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:00:22.209753",
+      "user_input": "Performance test",
+      "assistant_response": "Fast answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:00:22.210866",
+      "user_input": "Test query",
+      "assistant_response": "Search result",
+      "sources": [],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:00:22.211817",
+      "user_input": "Test query",
+      "assistant_response": "Direct answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:00:22.220628",
+      "user_input": "test",
+      "assistant_response": "Direct",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:00:22.221224",
+      "user_input": "test",
+      "assistant_response": "Search",
+      "sources": [],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:00:22.281519",
+      "user_input": "What are the latest AI developments?",
+      "assistant_response": "Test response",
+      "sources": [
+        {
+          "id": 1,
+          "title": "Test Source",
+          "url": "http://test.com"
+        }
+      ],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro2-preview"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:00:22.282647",
+      "user_input": "What is Python?",
+      "assistant_response": "Direct answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro2-preview"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:00:22.384245",
+      "user_input": "Test query",
+      "assistant_response": "test",
+      "sources": [],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:00:22.386027",
+      "user_input": "Test",
+      "assistant_response": "test response",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:00:22.635277",
+      "user_input": "Test",
+      "assistant_response": "test",
+      "sources": [],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:00:22.637153",
+      "user_input": "Test",
+      "assistant_response": "Direct answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:01:08.043933",
+      "user_input": "What is machine learning?",
+      "assistant_response": "Machine learning is a subset of artificial intelligence.",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:01:08.045012",
+      "user_input": "Latest AI news",
+      "assistant_response": "Search result",
+      "sources": [
+        {
+          "title": "Test Source 1",
+          "url": "https://example.com/1"
+        },
+        {
+          "title": "Test Source 2",
+          "url": "https://example.com/2"
+        }
+      ],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:01:08.046697",
+      "user_input": "What is Python?",
+      "assistant_response": "Direct answer from LLM",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:01:08.048651",
+      "user_input": "What is the capital of France?",
+      "assistant_response": "Direct answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:01:08.049356",
+      "user_input": "How do I implement a binary search in Python?",
+      "assistant_response": "Direct answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:01:08.050088",
+      "user_input": "What are the latest developments in AI in 2024?",
+      "assistant_response": "Search-based answer",
+      "sources": [],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:01:08.050740",
+      "user_input": "What is the current stock price of Apple?",
+      "assistant_response": "Search-based answer",
+      "sources": [],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:01:08.051753",
+      "user_input": "Explain machine learning",
+      "assistant_response": "Test answer about machine learning",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:01:08.052729",
+      "user_input": "What is 2 + 2?",
+      "assistant_response": "2 + 2 = 4",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:01:08.055749",
+      "user_input": "Test query 0",
+      "assistant_response": "Concurrent answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:01:08.056303",
+      "user_input": "Test query 1",
+      "assistant_response": "Concurrent answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:01:08.056812",
+      "user_input": "Test query 2",
+      "assistant_response": "Concurrent answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:01:08.057952",
+      "user_input": "Performance test",
+      "assistant_response": "Fast answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:01:08.058921",
+      "user_input": "Test query",
+      "assistant_response": "Search result",
+      "sources": [],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:01:08.059921",
+      "user_input": "Test query",
+      "assistant_response": "Direct answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:01:08.068833",
+      "user_input": "test",
+      "assistant_response": "Direct",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:01:08.069833",
+      "user_input": "test",
+      "assistant_response": "Search",
+      "sources": [],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:01:08.132345",
+      "user_input": "What are the latest AI developments?",
+      "assistant_response": "Test response",
+      "sources": [
+        {
+          "id": 1,
+          "title": "Test Source",
+          "url": "http://test.com"
+        }
+      ],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro2-preview"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:01:08.133550",
+      "user_input": "What is Python?",
+      "assistant_response": "Direct answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro2-preview"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:01:08.239786",
+      "user_input": "Test query",
+      "assistant_response": "test",
+      "sources": [],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:01:08.241795",
+      "user_input": "Test",
+      "assistant_response": "test response",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:01:08.489571",
+      "user_input": "Test",
+      "assistant_response": "test",
+      "sources": [],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:01:08.491385",
+      "user_input": "Test",
+      "assistant_response": "Direct answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:11:23.793068",
+      "user_input": "What is machine learning?",
+      "assistant_response": "Machine learning is a subset of artificial intelligence.",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:11:23.796076",
+      "user_input": "Latest AI news",
+      "assistant_response": "Search result",
+      "sources": [
+        {
+          "title": "Test Source 1",
+          "url": "https://example.com/1"
+        },
+        {
+          "title": "Test Source 2",
+          "url": "https://example.com/2"
+        }
+      ],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:11:23.798532",
+      "user_input": "What is Python?",
+      "assistant_response": "Direct answer from LLM",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:11:23.801455",
+      "user_input": "What is the capital of France?",
+      "assistant_response": "Direct answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:11:23.802567",
+      "user_input": "How do I implement a binary search in Python?",
+      "assistant_response": "Direct answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:11:23.803676",
+      "user_input": "What are the latest developments in AI in 2024?",
+      "assistant_response": "Search-based answer",
+      "sources": [],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:11:23.804722",
+      "user_input": "What is the current stock price of Apple?",
+      "assistant_response": "Search-based answer",
+      "sources": [],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:11:23.806215",
+      "user_input": "Explain machine learning",
+      "assistant_response": "Test answer about machine learning",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:11:23.807941",
+      "user_input": "What is 2 + 2?",
+      "assistant_response": "2 + 2 = 4",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:11:23.811757",
+      "user_input": "Test query 0",
+      "assistant_response": "Concurrent answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:11:23.812607",
+      "user_input": "Test query 1",
+      "assistant_response": "Concurrent answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:11:23.813439",
+      "user_input": "Test query 2",
+      "assistant_response": "Concurrent answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:11:23.814884",
+      "user_input": "Performance test",
+      "assistant_response": "Fast answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:11:23.816327",
+      "user_input": "Test query",
+      "assistant_response": "Search result",
+      "sources": [],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:11:23.817810",
+      "user_input": "Test query",
+      "assistant_response": "Direct answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:11:23.829664",
+      "user_input": "test",
+      "assistant_response": "Direct",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:11:23.830527",
+      "user_input": "test",
+      "assistant_response": "Search",
+      "sources": [],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:11:23.908714",
+      "user_input": "What are the latest AI developments?",
+      "assistant_response": "Test response",
+      "sources": [
+        {
+          "id": 1,
+          "title": "Test Source",
+          "url": "http://test.com"
+        }
+      ],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro2-preview"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:11:23.910070",
+      "user_input": "What is Python?",
+      "assistant_response": "Direct answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro2-preview"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:11:24.016464",
+      "user_input": "Test query",
+      "assistant_response": "test",
+      "sources": [],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:11:24.019447",
+      "user_input": "Test",
+      "assistant_response": "test response",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:11:24.271268",
+      "user_input": "Test",
+      "assistant_response": "test",
+      "sources": [],
+      "metadata": {
+        "search_used": true,
+        "model": "solar-pro-nightly"
+      }
+    },
+    {
+      "timestamp": "2025-06-21T12:11:24.273633",
+      "user_input": "Test",
+      "assistant_response": "Direct answer",
+      "sources": [],
+      "metadata": {
+        "search_used": false,
+        "model": "solar-pro-nightly"
+      }
+    }
+  ],
+  "summary": "",
+  "last_updated": "2025-06-21T12:11:24.273638",
+  "word_count": 548
+}

@@ -13,11 +13,14 @@ from dotenv import load_dotenv
 load_dotenv('.env.local')
 
 class SolarAPI:
-    def __init__(self, api_key=os.getenv("UPSTAGE_API_KEY"), base_url="https://api.upstage.ai/v1/chat/completions"):
+    def __init__(self, api_key=os.getenv("UPSTAGE_API_KEY"), base_url="https://api.upstage.ai/v1/chat/completions", memory_file="memory.json", enable_memory=True):
         """Initialize the SolarAPI client with the API key.
         
         Args:
             api_key (str): Your Upstage API key
+            base_url (str): The API base URL
+            memory_file (str): Path to the memory storage file
+            enable_memory (bool): Whether to enable conversation memory
         """
         self.api_key = api_key
         self.base_url = base_url
@@ -28,6 +31,21 @@ class SolarAPI:
         # Initialize citation manager
         from citations import CitationManager
         self.citation_manager = CitationManager(self)
+        
+        # Initialize memory manager
+        self.enable_memory = enable_memory
+        if enable_memory:
+            from memory import MemoryManager
+            # Create LLM function for summarization
+            def llm_summarize(prompt):
+                return self.complete(prompt, model="solar-pro-nightly", stream=False)
+            
+            self.memory_manager = MemoryManager(
+                memory_file=memory_file, 
+                llm_function=llm_summarize
+            )
+        else:
+            self.memory_manager = None
     
     def intelligent_complete(self, user_query, model="solar-pro-nightly", stream=False, on_update=None, on_search_start=None, on_search_done=None, on_search_queries_generated=None):
         """
@@ -47,16 +65,28 @@ class SolarAPI:
             dict: Response with 'answer', 'search_used' (bool), and 'sources' (if search was used)
         """
         
+        # Get conversation context from memory if available
+        context_enhanced_query = user_query
+        if self.enable_memory and self.memory_manager:
+            context = self.memory_manager.get_context()
+            if context.strip():
+                context_enhanced_query = f"""Previous conversation context:
+{context}
+
+Current user question: {user_query}
+
+Please answer the current question taking into account the previous conversation context when relevant."""
+        
         # Step 1: Start concurrent processes for search decision and query extraction
         with ThreadPoolExecutor(max_workers=3) as executor:
             # Future 1: Check if search is needed (Y/N) - fastest decision
             search_needed_future = executor.submit(
-                self._check_search_needed, user_query, model
+                self._check_search_needed, context_enhanced_query, model
             )
             
             # Future 2: Extract search queries (run in parallel with decision)
             search_queries_future = executor.submit(
-                self._extract_search_queries_fast, user_query, model
+                self._extract_search_queries_fast, context_enhanced_query, model
             )
             
             # Wait for both the search decision and queries to be ready
@@ -82,8 +112,17 @@ class SolarAPI:
                 
                 # Now perform the actual search and get grounded response
                 response_data = self._get_search_grounded_response(
-                    user_query, search_queries, model, stream, on_update, on_search_done
+                    context_enhanced_query, search_queries, model, stream, on_update, on_search_done
                 )
+                
+                # Store conversation in memory
+                if self.enable_memory and self.memory_manager:
+                    self.memory_manager.add_conversation(
+                        user_query, 
+                        response_data['response'],
+                        response_data.get('sources', []),
+                        {'search_used': True, 'model': model}
+                    )
                 
                 return {
                     'answer': response_data['response'],
@@ -96,11 +135,20 @@ class SolarAPI:
                 
                 # Start the direct answer now (we didn't start it earlier to save resources)
                 direct_answer_future = executor.submit(
-                    self._get_direct_answer, user_query, model, stream, on_update
+                    self._get_direct_answer, context_enhanced_query, model, stream, on_update
                 )
                 
                 # Get the direct answer
                 direct_answer = direct_answer_future.result()
+                
+                # Store conversation in memory
+                if self.enable_memory and self.memory_manager:
+                    self.memory_manager.add_conversation(
+                        user_query, 
+                        direct_answer,
+                        [],
+                        {'search_used': False, 'model': model}
+                    )
                 
                 return {
                     'answer': direct_answer,
@@ -539,6 +587,39 @@ Keep your tone friendly but efficient.
         """Delegate to citation manager."""
         return self.citation_manager.fill_citation(response_text, sources, model)
     
+    # Memory management methods
+    def get_memory_stats(self):
+        """Get memory statistics."""
+        if self.enable_memory and self.memory_manager:
+            return self.memory_manager.get_memory_stats()
+        return {"memory_disabled": True}
+    
+    def get_conversation_context(self, max_words=2000):
+        """Get conversation context for current session."""
+        if self.enable_memory and self.memory_manager:
+            return self.memory_manager.get_context(max_words)
+        return ""
+    
+    def clear_memory(self):
+        """Clear all conversation memory."""
+        if self.enable_memory and self.memory_manager:
+            self.memory_manager.clear_memory()
+    
+    def export_memory(self, export_file=None):
+        """Export memory to file or return as string."""
+        if self.enable_memory and self.memory_manager:
+            return self.memory_manager.export_memory(export_file)
+        return "{}"
+    
+    def summarize_memory(self):
+        """Trigger memory summarization using LLM."""
+        if self.enable_memory and self.memory_manager:
+            # Create a summarization function that uses this SolarAPI instance
+            def llm_summarize(prompt):
+                return self.complete(prompt, model="solar-pro-nightly", stream=False)
+            
+            self.memory_manager.summarize_with_llm(llm_summarize)
+    
     def _standard_request(self, payload):
         """Make a standard non-streaming request."""
         response = requests.post(
@@ -605,7 +686,7 @@ if __name__ == "__main__":
     
     solar = SolarAPI(api_key)
     
-    print("=== Solar API Demo ===\n")
+    print("=== Solar API Demo with Memory ===\n")
     
     # Example 1: Basic completion
     print("1. Basic completion:")
@@ -619,8 +700,20 @@ if __name__ == "__main__":
     print(f"Search used: {result['search_used']}")
     print(f"Sources found: {len(result['sources'])}\n")
     
-    # Example 3: Streaming response
-    print("3. Streaming response:")
+    # Example 3: Memory functionality
+    print("3. Memory functionality:")
+    print("First conversation:")
+    result1 = solar.intelligent_complete("My name is John and I like programming")
+    print(f"Response: {result1['answer'][:100]}...")
+    
+    print("\nSecond conversation (should remember the name):")
+    result2 = solar.intelligent_complete("What programming languages do you recommend for me?")
+    print(f"Response: {result2['answer'][:100]}...")
+    
+    print(f"\nMemory stats: {solar.get_memory_stats()}")
+    
+    # Example 4: Streaming response
+    print("\n4. Streaming response:")
     print("Question: How does machine learning work?")
     print("Answer: ", end="")
     
