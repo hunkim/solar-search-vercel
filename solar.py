@@ -291,7 +291,7 @@ JSON array:"""
             # Use direct API calls instead of tavily-python library
             tavily_api_key = os.getenv("TAVILY_API_KEY")
             if not tavily_api_key:
-                print("TAVILY_API_KEY not set, using mock search results")
+                # TAVILY_API_KEY not set, using mock search results
                 # Return mock results for testing
                 sources = [
                     {
@@ -323,7 +323,7 @@ JSON array:"""
                 # Submit all search queries concurrently
                 search_futures = []
                 for query in search_queries[:3]:  # Limit to 3 queries
-                    print(f"Searching for: {query}")
+                    # Searching for: {query}
                     future = search_executor.submit(self._tavily_search, query, tavily_api_key)
                     search_futures.append(future)
                 
@@ -341,7 +341,7 @@ JSON array:"""
                     seen_urls.add(url)
                     unique_results.append(result)
             
-            print(f"Found {len(unique_results)} unique search results")
+            # Found {len(unique_results)} unique search results
             
             # Format search results as context
             search_context = ""
@@ -462,7 +462,7 @@ Provide a well-structured, informative answer based on the search results:"""
                 # Use direct API calls instead of tavily-python library
                 tavily_api_key = os.getenv("TAVILY_API_KEY")
                 if not tavily_api_key:
-                    print("TAVILY_API_KEY not set, proceeding without search grounding")
+                    # TAVILY_API_KEY not set, proceeding without search grounding
                     # Call the callback with empty results
                     if search_done_callback:
                         search_done_callback([])
@@ -471,7 +471,7 @@ Provide a well-structured, informative answer based on the search results:"""
                     if False:
                         queries_json = extract_search_queries(prompt)
                         queries = json.loads(queries_json)["search_queries"]
-                        print(f"Search queries: {queries}")
+                        # Search queries: {queries}
                     else:
                         queries = [prompt]
 
@@ -483,7 +483,7 @@ Provide a well-structured, informative answer based on the search results:"""
                         # Submit all search queries concurrently
                         search_futures = []
                         for query in queries[:3]:
-                            print(f"Searching for {query}")
+                            # Searching for {query}
                             future = search_executor.submit(self._tavily_search, query, tavily_api_key, 10)
                             search_futures.append(future)
                         
@@ -530,7 +530,7 @@ IMPORTANT INSTRUCTIONS:
 2. Be BRIEF and CONCISE - this is for Telegram, so get to the point clearly.
 3. Make FULL USE of the search results and use terms from the search results in your response.
 4. Add citation numbers [1], [2], etc. directly after the specific word or sentence that uses information from the sources. Add citations only for highly relevant information derived from the sources.
-5. Consider TIME-SENSITIVITY - today's date is {datetime.now().strftime("%Y-%m-%d")}.
+5. Consider TIME-SENSITIVITY - today's date is {datetime.now().strftime("%Y-%m-%d")} - but DO NOT mention the date or time in your response unless specifically asked.
 
 Provide a direct, informative answer based on the search results. If the search results don't contain relevant information, briefly state that you don't have sufficient information to answer the question.
 

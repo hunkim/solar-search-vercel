@@ -192,7 +192,7 @@ class MemoryManager:
     
     def _summarize_memory(self, llm_function=None):
         """Summarize memory when it exceeds the maximum word limit."""
-        print(f"Memory exceeds {self.max_words} words, summarizing...")
+        # Memory exceeds {self.max_words} words, summarizing...
         
         # Create a simple summary from existing conversations
         if not self.memory["conversations"]:
@@ -235,7 +235,7 @@ class MemoryManager:
         self.memory["conversations"] = important_conversations
         self._update_word_count()
         
-        print(f"Memory summarized. New word count: {self.memory['word_count']}")
+        # Memory summarized. New word count: {self.memory['word_count']}
     
     def summarize_with_llm(self, llm_function):
         """
@@ -284,7 +284,7 @@ Summary:"""
             self.memory["conversations"] = self.memory["conversations"][-3:]  # Keep only last 3 conversations
             self._update_word_count()
             
-            print(f"Memory summarized with LLM. New word count: {self.memory['word_count']}")
+            # Memory summarized with LLM. New word count: {self.memory['word_count']}
             
         except Exception as e:
             print(f"Error during LLM summarization: {e}")
