@@ -295,19 +295,31 @@ class TelegramWebhookHandler:
             min_update_interval = 0.3
             min_update_chars = 25
 
+            # Get the main event loop once for all callbacks (Vercel serverless fix)
+            try:
+                main_loop = asyncio.get_running_loop()
+            except RuntimeError:
+                # Fallback if no running loop
+                main_loop = None
+
             # Callback functions for the intelligent API
             def on_search_start():
                 """Called when search is detected as needed"""
                 nonlocal search_used
                 search_used = True
                 # Update status message
-                asyncio.create_task(
-                    bot.edit_message_text(
-                        chat_id=update.effective_chat.id,
-                        message_id=status_message.message_id,
-                        text=f"🔍 Search needed. Generating queries..."
-                    )
-                )
+                try:
+                    if main_loop:
+                        asyncio.run_coroutine_threadsafe(
+                            bot.edit_message_text(
+                                chat_id=update.effective_chat.id,
+                                message_id=status_message.message_id,
+                                text=f"🔍 Search needed. Generating queries..."
+                            ),
+                            main_loop
+                        )
+                except Exception as e:
+                    logger.warning(f"Error updating search start message: {e}")
 
             def on_search_queries_generated(queries):
                 """Called when search queries are generated - show immediately"""
@@ -316,14 +328,19 @@ class TelegramWebhookHandler:
                 logger.info(f"Search queries generated: {queries}")
                 # Show the search queries to the user immediately for best UX
                 queries_text = ", ".join(queries[:3])  # Show up to 3 queries
-                asyncio.create_task(
-                    bot.edit_message_text(
-                        chat_id=update.effective_chat.id,
-                        message_id=status_message.message_id,
-                        text=f"🔍 <b>Searching:</b> {queries_text[:90]}...",
-                        parse_mode="HTML"
-                    )
-                )
+                try:
+                    if main_loop:
+                        asyncio.run_coroutine_threadsafe(
+                            bot.edit_message_text(
+                                chat_id=update.effective_chat.id,
+                                message_id=status_message.message_id,
+                                text=f"🔍 <b>Searching:</b> {queries_text[:90]}...",
+                                parse_mode="HTML"
+                            ),
+                            main_loop
+                        )
+                except Exception as e:
+                    logger.warning(f"Error updating search queries message: {e}")
 
             def on_search_done(search_sources):
                 """Called when search is completed with sources"""
@@ -331,13 +348,18 @@ class TelegramWebhookHandler:
                 sources = search_sources
                 logger.info(f"Search completed with {len(sources)} sources")
                 # Update status to show search completion and start generating
-                asyncio.create_task(
-                    bot.edit_message_text(
-                        chat_id=update.effective_chat.id,
-                        message_id=status_message.message_id,
-                        text=f"✅ Found {len(sources)} sources. Generating answer..."
-                    )
-                )
+                try:
+                    if main_loop:
+                        asyncio.run_coroutine_threadsafe(
+                            bot.edit_message_text(
+                                chat_id=update.effective_chat.id,
+                                message_id=status_message.message_id,
+                                text=f"✅ Found {len(sources)} sources. Generating answer..."
+                            ),
+                            main_loop
+                        )
+                except Exception as e:
+                    logger.warning(f"Error updating search done message: {e}")
 
             def on_update(content):
                 """Called for each streaming update"""
@@ -366,15 +388,17 @@ class TelegramWebhookHandler:
                         if len(display_text) > 3500:
                             display_text = display_text[:3500] + "..."
                         
-                        asyncio.create_task(
-                            bot.edit_message_text(
-                                chat_id=update.effective_chat.id,
-                                message_id=status_message.message_id,
-                                text=f"{prefix} {display_text}",
-                                parse_mode="HTML",
-                                disable_web_page_preview=True
+                        if main_loop:
+                            asyncio.run_coroutine_threadsafe(
+                                bot.edit_message_text(
+                                    chat_id=update.effective_chat.id,
+                                    message_id=status_message.message_id,
+                                    text=f"{prefix} {display_text}",
+                                    parse_mode="HTML",
+                                    disable_web_page_preview=True
+                                ),
+                                main_loop
                             )
-                        )
                         last_update_length = current_length
                         last_update_time = current_time
                     except Exception as e:
