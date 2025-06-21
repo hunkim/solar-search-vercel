@@ -252,11 +252,11 @@ class TelegramBot:
             sources = []
             search_used = False
             
-            # More responsive throttling parameters for streaming
+            # Telegram-friendly throttling parameters to avoid flood control
             last_update_time = time.time()
             last_update_length = 0
-            min_update_interval = 0.3  # Reduced from 0.5 to 0.3 seconds
-            min_update_chars = 25      # Reduced from 50 to 25 characters
+            min_update_interval = 2.0  # Increased to 2.0 seconds to avoid flood control
+            min_update_chars = 100     # Increased to 100 characters for more substantial updates
 
             # Get the main event loop once for all callbacks
             main_loop = asyncio.get_running_loop()
@@ -315,11 +315,11 @@ class TelegramBot:
                 # Log streaming activity for debugging
                 logger.debug(f"Streaming update: +{len(content)} chars, total: {current_length}")
 
-                # More responsive throttling conditions
+                # Conservative throttling to avoid flood control
                 should_update = (
                     current_length > last_update_length and
-                    (current_length - last_update_length >= min_update_chars or
-                     current_time - last_update_time >= min_update_interval * 2)  # Allow longer interval for smaller updates
+                    current_length - last_update_length >= min_update_chars and
+                    current_time - last_update_time >= min_update_interval
                 )
 
                 if should_update:
@@ -350,11 +350,18 @@ class TelegramBot:
                     except Exception as e:
                         logger.warning(f"Error updating streaming message: {e}")
 
+            # Enhance query for Telegram - request brief, concise answers
+            enhanced_query = f"""Please provide a brief, concise answer suitable for Telegram messaging. Keep it under 3000 characters if possible.
+
+User question: {user_question}
+
+Instructions: Be direct, clear, and concise. Use bullet points or numbered lists when appropriate. Avoid overly long explanations."""
+
             # Use the intelligent API with all callbacks including search queries
             logger.info(f"Starting intelligent_complete for: {user_question[:50]}...")
             result = await asyncio.to_thread(
                 self.solar_api.intelligent_complete,
-                user_query=user_question,
+                user_query=enhanced_query,
                 model="solar-pro2-preview",
                 stream=True,
                 on_update=on_update,
@@ -369,7 +376,7 @@ class TelegramBot:
             search_was_used = result['search_used']
             final_sources = result['sources']
 
-            # Update the final message
+            # Update the final message with retry logic for flood control
             cleaned_text = self._clean_text(final_answer)
             prefix = "🌐 <b>Answer:</b>" if search_was_used else "🧠 <b>Answer:</b>"
             
@@ -378,11 +385,35 @@ class TelegramBot:
             if len(cleaned_text) > 4000:
                 cleaned_text = cleaned_text[:4000] + "..."
             
-            await status_message.edit_text(
-                f"{prefix} {cleaned_text}",
-                parse_mode="HTML",
-                disable_web_page_preview=True
-            )
+            # Retry logic for final message to handle flood control
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    await status_message.edit_text(
+                        f"{prefix} {cleaned_text}",
+                        parse_mode="HTML",
+                        disable_web_page_preview=True
+                    )
+                    break  # Success, exit retry loop
+                except Exception as e:
+                    if "flood control" in str(e).lower() and attempt < max_retries - 1:
+                        # Wait before retry for flood control
+                        wait_time = 5 * (attempt + 1)  # 5, 10, 15 seconds
+                        logger.warning(f"Flood control hit, waiting {wait_time}s before retry {attempt + 1}")
+                        await asyncio.sleep(wait_time)
+                    else:
+                        logger.error(f"Failed to send final message after {attempt + 1} attempts: {e}")
+                        if attempt == max_retries - 1:
+                            # Last attempt failed, try sending as new message
+                            try:
+                                await update.message.reply_text(
+                                    f"{prefix} {cleaned_text}",
+                                    parse_mode="HTML",
+                                    disable_web_page_preview=True
+                                )
+                            except Exception as final_e:
+                                logger.error(f"Failed to send final message as new message: {final_e}")
+                        break
 
             # If search was used, show sources
             if search_was_used and final_sources:

@@ -289,11 +289,11 @@ class TelegramWebhookHandler:
             sources = []
             search_used = False
             
-            # More responsive throttling parameters for streaming
+            # Telegram-friendly throttling parameters to avoid flood control
             last_update_time = time.time()
             last_update_length = 0
-            min_update_interval = 0.3
-            min_update_chars = 25
+            min_update_interval = 2.0  # Increased from 0.3 to 2.0 seconds to avoid flood control
+            min_update_chars = 100     # Increased from 25 to 100 characters for more substantial updates
 
             # Get the main event loop once for all callbacks (Vercel serverless fix)
             try:
@@ -369,11 +369,11 @@ class TelegramWebhookHandler:
                 current_time = time.time()
                 current_length = len(accumulated_text)
 
-                # More responsive throttling conditions
+                # Conservative throttling to avoid flood control
                 should_update = (
                     current_length > last_update_length and
-                    (current_length - last_update_length >= min_update_chars or
-                     current_time - last_update_time >= min_update_interval * 2)
+                    current_length - last_update_length >= min_update_chars and
+                    current_time - last_update_time >= min_update_interval
                 )
 
                 if should_update:
@@ -404,10 +404,17 @@ class TelegramWebhookHandler:
                     except Exception as e:
                         logger.warning(f"Error updating streaming message: {e}")
 
+            # Enhance query for Telegram - request brief, concise answers
+            enhanced_query = f"""Please provide a brief, concise answer suitable for Telegram messaging. Keep it under 3000 characters if possible.
+
+User question: {user_question}
+
+Instructions: Be direct, clear, and concise. Use bullet points or numbered lists when appropriate. Avoid overly long explanations."""
+
             # Call Solar API with all callbacks
             result = await asyncio.to_thread(
                 self.solar_api.intelligent_complete,
-                user_query=user_question,
+                user_query=enhanced_query,
                 model="solar-pro2-preview",
                 stream=True,
                 on_update=on_update,
@@ -430,13 +437,38 @@ class TelegramWebhookHandler:
             if len(cleaned_text) > 4000:
                 cleaned_text = cleaned_text[:4000] + "..."
             
-            await bot.edit_message_text(
-                chat_id=update.effective_chat.id,
-                message_id=status_message.message_id,
-                text=f"{prefix} {cleaned_text}",
-                parse_mode="HTML",
-                disable_web_page_preview=True
-            )
+            # Retry logic for final message to handle flood control
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    await bot.edit_message_text(
+                        chat_id=update.effective_chat.id,
+                        message_id=status_message.message_id,
+                        text=f"{prefix} {cleaned_text}",
+                        parse_mode="HTML",
+                        disable_web_page_preview=True
+                    )
+                    break  # Success, exit retry loop
+                except Exception as e:
+                    if "flood control" in str(e).lower() and attempt < max_retries - 1:
+                        # Wait before retry for flood control
+                        wait_time = 5 * (attempt + 1)  # 5, 10, 15 seconds
+                        logger.warning(f"Flood control hit, waiting {wait_time}s before retry {attempt + 1}")
+                        await asyncio.sleep(wait_time)
+                    else:
+                        logger.error(f"Failed to send final message after {attempt + 1} attempts: {e}")
+                        if attempt == max_retries - 1:
+                            # Last attempt failed, try sending as new message
+                            try:
+                                await bot.send_message(
+                                    chat_id=update.effective_chat.id,
+                                    text=f"{prefix} {cleaned_text}",
+                                    parse_mode="HTML",
+                                    disable_web_page_preview=True
+                                )
+                            except Exception as final_e:
+                                logger.error(f"Failed to send final message as new message: {final_e}")
+                        break
 
             # If search was used, show sources
             if search_was_used and final_sources:
