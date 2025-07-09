@@ -307,7 +307,7 @@ class TelegramBot:
             result = await asyncio.to_thread(
                 self.solar_api.intelligent_complete,
                 user_query=enhanced_query,
-                model="solar-pro2-preview",
+                model=os.getenv("UPSTAGE_MODEL_NAME", "solar-pro2"),
                 stream=True,
                 on_update=on_update,
                 on_search_start=on_search_start,

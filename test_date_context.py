@@ -37,7 +37,7 @@ def test_date_context():
     for query in test_queries:
         print(f"\nUser Query: '{query}'")
         try:
-            search_queries = solar_api._extract_search_queries_fast(query, "solar-pro2-preview")
+            search_queries = solar_api._extract_search_queries_fast(query, os.getenv("UPSTAGE_MODEL_NAME", "solar-pro2"))
             print(f"Generated Search Queries: {search_queries}")
             
             # Check if current year is included in at least one query
@@ -70,7 +70,7 @@ def test_date_context():
         
         solar_api.complete = mock_complete
         
-        response = solar_api._get_direct_answer(test_query, "solar-pro2-preview", False, None)
+        response = solar_api._get_direct_answer(test_query, os.getenv("UPSTAGE_MODEL_NAME", "solar-pro2"), False, None)
         
         print(f"Enhanced Prompt Generated:")
         print(f"'{captured_prompt[:200]}...'")
@@ -136,7 +136,7 @@ def test_date_context():
             
             solar_api.complete = mock_complete
             
-            decision = solar_api._check_search_needed(query, "solar-pro2-preview")
+            decision = solar_api._check_search_needed(query, os.getenv("UPSTAGE_MODEL_NAME", "solar-pro2"))
             
             # Check if date context is in the search decision prompt
             current_date = datetime.now().strftime("%B %d, %Y")

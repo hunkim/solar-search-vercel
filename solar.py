@@ -28,6 +28,9 @@ class SolarAPI:
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         }
+        # Set default model from environment variable
+        self.default_model = os.getenv("UPSTAGE_MODEL_NAME", "solar-pro2")
+        
         # Initialize citation manager
         from citations import CitationManager
         self.citation_manager = CitationManager(self)
@@ -38,7 +41,7 @@ class SolarAPI:
             from memory import MemoryManager
             # Create LLM function for summarization
             def llm_summarize(prompt):
-                return self.complete(prompt, model="solar-pro-nightly", stream=False)
+                return self.complete(prompt, model=self.default_model, stream=False)
             
             self.memory_manager = MemoryManager(
                 memory_file=memory_file, 
@@ -47,14 +50,14 @@ class SolarAPI:
         else:
             self.memory_manager = None
     
-    def intelligent_complete(self, user_query, model="solar-pro-nightly", stream=False, on_update=None, on_search_start=None, on_search_done=None, on_search_queries_generated=None):
+    def intelligent_complete(self, user_query, model=None, stream=False, on_update=None, on_search_start=None, on_search_done=None, on_search_queries_generated=None):
         """
         Intelligently complete a user query by determining if web search is needed,
         and providing either direct answers or search-grounded responses.
         
         Args:
             user_query (str): The user's input query
-            model (str): The model to use for completions
+            model (str): The model to use for completions (defaults to configured model)
             stream (bool): Whether to stream the final response
             on_update (callable): Function to call with each update when streaming
             on_search_start (callable): Function to call when search process starts
@@ -64,6 +67,9 @@ class SolarAPI:
         Returns:
             dict: Response with 'answer', 'search_used' (bool), and 'sources' (if search was used)
         """
+        # Use default model if none provided
+        if model is None:
+            model = self.default_model
         
         # Get conversation context from memory if available
         context_enhanced_query = user_query
@@ -583,8 +589,10 @@ Keep your tone friendly but efficient.
         """Delegate to citation manager."""
         return self.citation_manager.fill_citation_heuristic(response_text, sources)
     
-    def fill_citation(self, response_text, sources, model="solar-pro-nightly"):
+    def fill_citation(self, response_text, sources, model=None):
         """Delegate to citation manager."""
+        if model is None:
+            model = self.default_model
         return self.citation_manager.fill_citation(response_text, sources, model)
     
     # Memory management methods
@@ -616,7 +624,7 @@ Keep your tone friendly but efficient.
         if self.enable_memory and self.memory_manager:
             # Create a summarization function that uses this SolarAPI instance
             def llm_summarize(prompt):
-                return self.complete(prompt, model="solar-pro-nightly", stream=False)
+                return self.complete(prompt, model=self.default_model, stream=False)
             
             self.memory_manager.summarize_with_llm(llm_summarize)
     
